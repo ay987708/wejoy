@@ -280,7 +280,7 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ),
                           child: Text(
-                            isLogin ? "Se connecter" : "Créer un compte",
+                            isLogin ? "Se connecter" : "Créer un Compte",
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 16,
