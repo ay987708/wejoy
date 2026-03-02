@@ -17,7 +17,57 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmController = TextEditingController();
 
-  // Couleurs principales tirées du design
+  // ================= VALIDATION =================
+
+  bool isValidEmail(String email) {
+    final emailRegex =
+        RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    return emailRegex.hasMatch(email);
+  }
+
+  bool isValidPassword(String password) {
+    final passwordRegex =
+        RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$');
+    return passwordRegex.hasMatch(password);
+  }
+
+  void validateAndSubmit() {
+    String email = emailController.text.trim();
+    String password = passwordController.text.trim();
+
+    if (!isValidEmail(email)) {
+      showMessage("Email invalide");
+      return;
+    }
+
+    if (!isValidPassword(password)) {
+      showMessage(
+          "Mot de passe doit contenir au moins 8 caractères,\nune majuscule, une minuscule et un chiffre");
+      return;
+    }
+
+    if (!isLogin) {
+      if (fullnameController.text.trim().isEmpty) {
+        showMessage("Nom complet obligatoire");
+        return;
+      }
+
+      if (password != confirmController.text.trim()) {
+        showMessage("Les mots de passe ne correspondent pas");
+        return;
+      }
+    }
+
+    print("Validation réussie");
+  }
+
+  void showMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  // =================================================
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +75,6 @@ class _LoginPageState extends State<LoginPage> {
       body: Container(
         width: double.infinity,
         height: double.infinity,
-        // Fond dégradé lavande doux comme dans la capture
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
@@ -43,7 +92,6 @@ class _LoginPageState extends State<LoginPage> {
               children: [
                 const SizedBox(height: 50),
 
-                // Logo avec icône de groupe + étoile
                 Container(
                   width: 80,
                   height: 80,
@@ -64,7 +112,6 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 16),
 
-                // Titre "wejoy" en violet gras
                 const Text(
                   "wejoy",
                   style: TextStyle(
@@ -76,7 +123,6 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 6),
 
-                // Sous-titre en violet clair
                 const Text(
                   "Bienvenue dans votre espace bien-être",
                   style: TextStyle(
@@ -87,7 +133,6 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 30),
 
-                // Carte principale
                 Container(
                   width: 360,
                   padding: const EdgeInsets.all(24),
@@ -105,7 +150,8 @@ class _LoginPageState extends State<LoginPage> {
                   child: Column(
                     children: [
 
-                      // Onglets Connexion / Inscription
+                      // ===== Onglets Connexion / Inscription =====
+
                       Container(
                         decoration: BoxDecoration(
                           color: Colors.grey.shade100,
@@ -122,20 +168,16 @@ class _LoginPageState extends State<LoginPage> {
                                     gradient: isLogin
                                         ? const LinearGradient(
                                             colors: [Color(0xFFAB47BC), Color(0xFFE91E8C)],
-                                            begin: Alignment.centerLeft,
-                                            end: Alignment.centerRight,
                                           )
                                         : null,
-                                    color: isLogin ? null : Colors.transparent,
                                     borderRadius: BorderRadius.circular(30),
                                   ),
                                   child: Center(
                                     child: Text(
                                       "Connexion",
                                       style: TextStyle(
-                                        color: isLogin ? Colors.white : Colors.grey.shade600,
+                                        color: isLogin ? Colors.white : Colors.grey,
                                         fontWeight: isLogin ? FontWeight.bold : FontWeight.normal,
-                                        fontSize: 14,
                                       ),
                                     ),
                                   ),
@@ -151,20 +193,16 @@ class _LoginPageState extends State<LoginPage> {
                                     gradient: !isLogin
                                         ? const LinearGradient(
                                             colors: [Color(0xFFAB47BC), Color(0xFFE91E8C)],
-                                            begin: Alignment.centerLeft,
-                                            end: Alignment.centerRight,
                                           )
                                         : null,
-                                    color: !isLogin ? null : Colors.transparent,
                                     borderRadius: BorderRadius.circular(30),
                                   ),
                                   child: Center(
                                     child: Text(
                                       "Inscription",
                                       style: TextStyle(
-                                        color: !isLogin ? Colors.white : Colors.grey.shade600,
+                                        color: !isLogin ? Colors.white : Colors.grey,
                                         fontWeight: !isLogin ? FontWeight.bold : FontWeight.normal,
-                                        fontSize: 14,
                                       ),
                                     ),
                                   ),
@@ -177,7 +215,6 @@ class _LoginPageState extends State<LoginPage> {
 
                       const SizedBox(height: 24),
 
-                      // Nom complet (inscription seulement)
                       if (!isLogin) ...[
                         _buildTextField(
                           controller: fullnameController,
@@ -187,7 +224,6 @@ class _LoginPageState extends State<LoginPage> {
                         const SizedBox(height: 14),
                       ],
 
-                      // Email
                       _buildTextField(
                         controller: emailController,
                         hint: "Email",
@@ -196,20 +232,19 @@ class _LoginPageState extends State<LoginPage> {
 
                       const SizedBox(height: 14),
 
-                      // Mot de passe
                       _buildTextField(
                         controller: passwordController,
                         hint: "Mot de passe",
                         icon: Icons.lock_outline,
                         obscure: obscurePassword,
                         toggleObscure: () {
-                          setState(() => obscurePassword = !obscurePassword);
+                          setState(() =>
+                              obscurePassword = !obscurePassword);
                         },
                       ),
 
                       const SizedBox(height: 14),
 
-                      // Confirmation mot de passe (inscription seulement)
                       if (!isLogin) ...[
                         _buildTextField(
                           controller: confirmController,
@@ -217,49 +252,26 @@ class _LoginPageState extends State<LoginPage> {
                           icon: Icons.lock_outline,
                           obscure: obscureConfirm,
                           toggleObscure: () {
-                            setState(() => obscureConfirm = !obscureConfirm);
+                            setState(() =>
+                                obscureConfirm = !obscureConfirm);
                           },
                         ),
                         const SizedBox(height: 14),
                       ],
 
-                      // "Mot de passe oublié ?" aligné à droite (connexion seulement)
-                      if (isLogin) ...[
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: GestureDetector(
-                            onTap: () {},
-                            child: const Text(
-                              "Mot de passe oublié ?",
-                              style: TextStyle(
-                                color: Color(0xFFAB47BC),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                      ] else ...[
-                        const SizedBox(height: 6),
-                      ],
+                      const SizedBox(height: 20),
 
-                      // Bouton principal avec dégradé rose-violet
                       Container(
                         width: double.infinity,
                         height: 52,
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [Color(0xFFAB47BC), Color(0xFFE91E8C)],
-                            begin: Alignment.centerLeft,
-                            end: Alignment.centerRight,
                           ),
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: ElevatedButton(
-                          onPressed: () {
-                            print("Bouton cliqué");
-                          },
+                          onPressed: validateAndSubmit,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
@@ -279,18 +291,6 @@ class _LoginPageState extends State<LoginPage> {
                       ),
 
                       const SizedBox(height: 20),
-
-                      // Accès administrateur (toujours visible en bas)
-                      GestureDetector(
-                        onTap: () {},
-                        child: Text(
-                          "Accès administrateur",
-                          style: TextStyle(
-                            color: Colors.grey.shade500,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -317,12 +317,14 @@ class _LoginPageState extends State<LoginPage> {
       style: const TextStyle(fontSize: 15),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 15),
-        prefixIcon: Icon(icon, color: const Color(0xFFAB47BC), size: 20),
+        prefixIcon:
+            Icon(icon, color: const Color(0xFFAB47BC), size: 20),
         suffixIcon: toggleObscure != null
             ? IconButton(
                 icon: Icon(
-                  (obscure ?? false) ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  (obscure ?? false)
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
                   color: const Color(0xFFAB47BC),
                   size: 20,
                 ),
@@ -331,7 +333,8 @@ class _LoginPageState extends State<LoginPage> {
             : null,
         filled: true,
         fillColor: Colors.grey.shade50,
-        contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        contentPadding: const EdgeInsets.symmetric(
+            vertical: 16, horizontal: 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(color: Colors.grey.shade200),
@@ -342,7 +345,8 @@ class _LoginPageState extends State<LoginPage> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFFAB47BC), width: 1.5),
+          borderSide:
+              const BorderSide(color: Color(0xFFAB47BC), width: 1.5),
         ),
       ),
     );
