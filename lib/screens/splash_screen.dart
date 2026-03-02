@@ -140,15 +140,15 @@ class _SplashScreenState extends State<SplashScreen>
                       children: [
                         TextSpan(
                           text: "we",
-                          style: TextStyle(color: Color(0xFF7B52D6)), // violet
+                          style: TextStyle(color: Color(0xFF9B27AF)), // violet
                         ),
                         TextSpan(
                           text: "j",
-                          style: TextStyle(color: Color(0xFF4499EE)), // bleu/cyan
+                          style: TextStyle(color: Color(0xFF9B27AF)), // bleu/cyan
                         ),
                         TextSpan(
                           text: "oy",
-                          style: TextStyle(color: Color(0xFF5566CC)), // bleu-violet
+                          style: TextStyle(color: Color(0xFF9B27AF)), // bleu-violet
                         ),
                       ],
                     ),
@@ -164,7 +164,7 @@ class _SplashScreenState extends State<SplashScreen>
                 child: const Text(
                   "Ensemble contre l'isolement",
                   style: TextStyle(
-                    color: Color(0xFF7B44CC),
+                    color: Color(0xFF9B27AF),
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
                     letterSpacing: 0.2,
