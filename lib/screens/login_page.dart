@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -18,20 +20,18 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController confirmController = TextEditingController();
 
   // ================= VALIDATION =================
-
   bool isValidEmail(String email) {
-    final emailRegex =
-        RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     return emailRegex.hasMatch(email);
   }
 
-  bool isValidPassword(String password) {
-    final passwordRegex =
-        RegExp(r'^(?=.[a-z])(?=.[A-Z])(?=.*\d).{8,}$');
-    return passwordRegex.hasMatch(password);
-  }
+bool isValidPassword(String password) {
+  final passwordRegex =
+      RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$');
+  return passwordRegex.hasMatch(password);
+}
 
-  void validateAndSubmit() {
+  void validateAndSubmit() async {
     String email = emailController.text.trim();
     String password = passwordController.text.trim();
 
@@ -56,9 +56,13 @@ class _LoginPageState extends State<LoginPage> {
         showMessage("Les mots de passe ne correspondent pas");
         return;
       }
-    }
 
-    print("Validation réussie");
+      // Inscription
+      await registerUser(fullnameController.text.trim(), email, password);
+    } else {
+      // Connexion
+      await loginUser(email, password);
+    }
   }
 
   void showMessage(String message) {
@@ -67,8 +71,119 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  // =================================================
+  void showMessageDialog(String title, String message, {bool isSuccess = true}) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(
+                isSuccess ? Icons.check_circle : Icons.error,
+                color: isSuccess ? Colors.green : Colors.red,
+              ),
+              const SizedBox(width: 8),
+              Text(title),
+            ],
+          ),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text("OK"),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
+  // ================= BACKEND =================
+  Future<void> registerUser(String name, String email, String password) async {
+    try {
+      var url = Uri.parse('http://localhost:5000/api/auth/register');
+      var response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'name': name,
+          'email': email,
+          'password': password,
+        }),
+      );
+
+      var data = jsonDecode(response.body);
+
+      if (response.statusCode == 201) {
+        showMessageDialog("Succès", data['message'], isSuccess: true);
+        setState(() {
+          isLogin = true; // après inscription, retourne à la connexion
+        });
+      } else {
+        showMessageDialog("Erreur", data['message'], isSuccess: false);
+      }
+    } catch (e) {
+      showMessage("Erreur serveur : $e");
+    }
+  }
+
+  Future<void> loginUser(String email, String password) async {
+    try {
+      var url = Uri.parse('http://localhost:5000/api/auth/login');
+      var response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'password': password,
+        }),
+      );
+
+      var data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        String token = data['token'];
+        showMessageDialog("Succès", data['message'], isSuccess: true);
+        print("Token JWT : $token");
+        // TODO: Naviguer vers la page d'accueil ou enregistrer le token
+      } else {
+        showMessageDialog("Erreur", data['message'], isSuccess: false);
+      }
+    } catch (e) {
+      showMessage("Erreur serveur : $e");
+    }
+  }
+
+  // ================= FORGOT PASSWORD =================
+  Future<void> forgotPassword() async {
+    String email = emailController.text.trim();
+
+    if (!isValidEmail(email)) {
+      showMessageDialog("Erreur", "Veuillez entrer un email valide", isSuccess: false);
+      return;
+    }
+
+    try {
+      var url = Uri.parse('http://localhost:5000/api/auth/forgot-password');
+      var response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+
+      var data = jsonDecode(response.body);
+
+      if (response.statusCode == 200) {
+        showMessageDialog("Succès", data['message'], isSuccess: true);
+      } else {
+        showMessageDialog("Erreur", data['message'], isSuccess: false);
+      }
+    } catch (e) {
+      showMessageDialog("Erreur", "Erreur serveur : $e", isSuccess: false);
+    }
+  }
+
+  // =================================================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -91,7 +206,6 @@ class _LoginPageState extends State<LoginPage> {
             child: Column(
               children: [
                 const SizedBox(height: 50),
-
                 Container(
                   width: 80,
                   height: 80,
@@ -109,9 +223,7 @@ class _LoginPageState extends State<LoginPage> {
                     size: 38,
                   ),
                 ),
-
                 const SizedBox(height: 16),
-
                 const Text(
                   "wejoy",
                   style: TextStyle(
@@ -120,9 +232,7 @@ class _LoginPageState extends State<LoginPage> {
                     color: Color(0xFF9B27AF),
                   ),
                 ),
-
                 const SizedBox(height: 6),
-
                 const Text(
                   "Bienvenue dans votre espace bien-être",
                   style: TextStyle(
@@ -130,9 +240,7 @@ class _LoginPageState extends State<LoginPage> {
                     fontSize: 14,
                   ),
                 ),
-
                 const SizedBox(height: 30),
-
                 Container(
                   width: 360,
                   padding: const EdgeInsets.all(24),
@@ -149,9 +257,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   child: Column(
                     children: [
-
                       // ===== Onglets Connexion / Inscription =====
-
                       Container(
                         decoration: BoxDecoration(
                           color: Colors.grey.shade100,
@@ -212,9 +318,7 @@ class _LoginPageState extends State<LoginPage> {
                           ],
                         ),
                       ),
-
                       const SizedBox(height: 24),
-
                       if (!isLogin) ...[
                         _buildTextField(
                           controller: fullnameController,
@@ -223,28 +327,37 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         const SizedBox(height: 14),
                       ],
-
                       _buildTextField(
                         controller: emailController,
                         hint: "Email",
                         icon: Icons.email_outlined,
                       ),
-
                       const SizedBox(height: 14),
-
                       _buildTextField(
                         controller: passwordController,
                         hint: "Mot de passe",
                         icon: Icons.lock_outline,
                         obscure: obscurePassword,
                         toggleObscure: () {
-                          setState(() =>
-                              obscurePassword = !obscurePassword);
+                          setState(() => obscurePassword = !obscurePassword);
                         },
                       ),
-
+                      if (isLogin)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: GestureDetector(
+                            onTap: forgotPassword,
+                            child: const Text(
+                              "Mot de passe oublié ?",
+                              style: TextStyle(
+                                color: Color(0xFFAB47BC),
+                                fontWeight: FontWeight.w500,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                        ),
                       const SizedBox(height: 14),
-
                       if (!isLogin) ...[
                         _buildTextField(
                           controller: confirmController,
@@ -252,15 +365,12 @@ class _LoginPageState extends State<LoginPage> {
                           icon: Icons.lock_outline,
                           obscure: obscureConfirm,
                           toggleObscure: () {
-                            setState(() =>
-                                obscureConfirm = !obscureConfirm);
+                            setState(() => obscureConfirm = !obscureConfirm);
                           },
                         ),
                         const SizedBox(height: 14),
                       ],
-
                       const SizedBox(height: 20),
-
                       Container(
                         width: double.infinity,
                         height: 52,
@@ -289,12 +399,10 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                       ),
-
                       const SizedBox(height: 20),
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 40),
               ],
             ),
@@ -317,8 +425,7 @@ class _LoginPageState extends State<LoginPage> {
       style: const TextStyle(fontSize: 15),
       decoration: InputDecoration(
         hintText: hint,
-        prefixIcon:
-            Icon(icon, color: const Color(0xFFAB47BC), size: 20),
+        prefixIcon: Icon(icon, color: const Color(0xFFAB47BC), size: 20),
         suffixIcon: toggleObscure != null
             ? IconButton(
                 icon: Icon(
@@ -333,8 +440,7 @@ class _LoginPageState extends State<LoginPage> {
             : null,
         filled: true,
         fillColor: Colors.grey.shade50,
-        contentPadding: const EdgeInsets.symmetric(
-            vertical: 16, horizontal: 12),
+        contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(color: Colors.grey.shade200),
@@ -345,8 +451,7 @@ class _LoginPageState extends State<LoginPage> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide:
-              const BorderSide(color: Color(0xFFAB47BC), width: 1.5),
+          borderSide: const BorderSide(color: Color(0xFFAB47BC), width: 1.5),
         ),
       ),
     );
