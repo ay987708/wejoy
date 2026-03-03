@@ -27,7 +27,7 @@ class _LoginPageState extends State<LoginPage> {
 
   bool isValidPassword(String password) {
     final passwordRegex =
-        RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$');
+        RegExp(r'^(?=.[a-z])(?=.[A-Z])(?=.*\d).{8,}$');
     return passwordRegex.hasMatch(password);
   }
 
