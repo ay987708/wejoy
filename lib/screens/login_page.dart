@@ -342,20 +342,22 @@ class _LoginPageState extends State<LoginPage> {
                         },
                       ),
                       if (isLogin)
-                        Align(
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6, right: 4),
+                        child: Align(
                           alignment: Alignment.centerRight,
                           child: GestureDetector(
                             onTap: forgotPassword,
-                            child: const Text(
-                              "Mot de passe oublié ?",
-                              style: TextStyle(
-                                color: Color(0xFFAB47BC),
-                                fontWeight: FontWeight.w500,
-                                decoration: TextDecoration.underline,
-                              ),
+                            child: const Text("Mot de passe oublié ?",
+                            style: TextStyle(color: Color(0xFFAB47BC),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            decoration: TextDecoration.underline,
                             ),
                           ),
                         ),
+                      ),
+                    ),
                       const SizedBox(height: 14),
                       if (!isLogin) ...[
                         _buildTextField(
