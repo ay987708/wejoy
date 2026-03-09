@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:wejoy/screens/service/api_service.dart';
 import 'dart:convert';
 
-import 'package:wejoy/service/api_service.dart'; // ⚠️ IMPORT AJOUTÉ
+// ⚠️ IMPORT AJOUTÉ
 import 'package:wejoy/screens/home_page_connected.dart';
 
 // ✅ IP corrigée pour appareil physique

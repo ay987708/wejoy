@@ -448,7 +448,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   // ─── Welcome Card ──────────────────────────────────────────────────────────
   Widget _buildWelcomeCard() {
-    final name = _loadingUser ? '...' : (_user?.username?.split('@')[0] ?? '');
+    final name = _loadingUser ? '...' : (_user?.username.split('@')[0] ?? '');
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -622,7 +622,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             fit: BoxFit.cover,
                             width: 66,
                             height: 66,
-                            errorBuilder: (_, __, ___) => const Text(
+                            errorBuilder: (_, _, _) => const Text(
                               '👤',
                               style: TextStyle(fontSize: 30),
                             ),
@@ -961,7 +961,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       scrollDirection: Axis.horizontal,
                       physics: const BouncingScrollPhysics(),
                       itemCount: _recommended.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 12),
+                      separatorBuilder: (_, _) => const SizedBox(width: 12),
                       itemBuilder: (_, i) => _buildRecommendedCard(_recommended[i]),
                     ),
                   ),
@@ -1001,7 +1001,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       ? Image.network(
                           activity.imageUrl,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
+                          errorBuilder: (_, _, _) => Container(
                             color: const Color(0xFFD63FBF).withOpacity(0.1),
                             child: const Center(
                               child: Icon(
@@ -1300,7 +1300,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: _allActivities.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
                     itemBuilder: (_, i) => _buildActivityListItem(_allActivities[i]),
                   ),
       ],
@@ -1334,7 +1334,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   ? Image.network(
                       activity.imageUrl,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Icon(
+                      errorBuilder: (_, _, _) => const Icon(
                         Icons.image_rounded,
                         color: Color(0xFFD63FBF),
                       ),
