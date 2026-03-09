@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:wejoy/screens/service/api_service.dart';
 import 'dart:convert';
 
-import 'package:wejoy/screens/home.dart';
+import 'package:wejoy/service/api_service.dart'; // ⚠️ IMPORT AJOUTÉ
+import 'package:wejoy/screens/home_page_connected.dart';
+
+// ✅ IP corrigée pour appareil physique
+const String _baseUrl = 'http://192.168.1.11:5000';
 
 // =============================================
 // MODERN TOAST NOTIFICATION SYSTEM
@@ -21,9 +26,7 @@ class ModernToast {
     Duration duration = const Duration(seconds: 3),
   }) {
     _currentEntry?.remove();
-
     final overlay = Overlay.of(context);
-
     late OverlayEntry entry;
     entry = OverlayEntry(
       builder: (context) => _ToastWidget(
@@ -37,7 +40,6 @@ class ModernToast {
         duration: duration,
       ),
     );
-
     _currentEntry = entry;
     overlay.insert(entry);
   }
@@ -67,7 +69,6 @@ class _ToastWidgetState extends State<_ToastWidget>
   late AnimationController _controller;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
-  late Animation<double> _progressAnimation;
 
   @override
   void initState() {
@@ -76,33 +77,16 @@ class _ToastWidgetState extends State<_ToastWidget>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
-
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 1.5),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
-
     _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _controller, curve: const Interval(0, 0.5)),
     );
-
-    _progressAnimation = Tween<double>(begin: 1, end: 0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.linear),
-    );
-
     _controller.forward();
-
-    // Auto-dismiss
     Future.delayed(widget.duration, () {
       if (mounted) _dismiss();
-    });
-
-    // Progress bar animation
-    Future.delayed(const Duration(milliseconds: 400), () {
-      if (mounted) {
-        _controller.duration = widget.duration - const Duration(milliseconds: 400);
-        _controller.forward(from: 0);
-      }
     });
   }
 
@@ -159,7 +143,6 @@ class _ToastWidgetState extends State<_ToastWidget>
   @override
   Widget build(BuildContext context) {
     final config = _config;
-
     return Positioned(
       bottom: MediaQuery.of(context).padding.bottom + 24,
       left: 16,
@@ -177,22 +160,16 @@ class _ToastWidgetState extends State<_ToastWidget>
                   color: config.bgColor,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: config.accentColor.withOpacity(0.3),
-                    width: 1,
-                  ),
+                      color: config.accentColor.withOpacity(0.3), width: 1),
                   boxShadow: [
                     BoxShadow(
-                      color: config.accentColor.withOpacity(0.2),
-                      blurRadius: 20,
-                      spreadRadius: 0,
-                      offset: const Offset(0, 8),
-                    ),
+                        color: config.accentColor.withOpacity(0.2),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8)),
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.4),
-                      blurRadius: 30,
-                      spreadRadius: 0,
-                      offset: const Offset(0, 4),
-                    ),
+                        color: Colors.black.withOpacity(0.4),
+                        blurRadius: 30,
+                        offset: const Offset(0, 4)),
                   ],
                 ),
                 child: ClipRRect(
@@ -205,7 +182,6 @@ class _ToastWidgetState extends State<_ToastWidget>
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Icon with glow
                             Container(
                               width: 44,
                               height: 44,
@@ -213,56 +189,40 @@ class _ToastWidgetState extends State<_ToastWidget>
                                 color: config.accentColor.withOpacity(0.15),
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: Icon(
-                                config.icon,
-                                color: config.iconColor,
-                                size: 24,
-                              ),
+                              child: Icon(config.icon,
+                                  color: config.iconColor, size: 24),
                             ),
                             const SizedBox(width: 12),
-                            // Text content
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    widget.title,
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 15,
-                                      letterSpacing: -0.2,
-                                    ),
-                                  ),
+                                  Text(widget.title,
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 15)),
                                   const SizedBox(height: 3),
-                                  Text(
-                                    widget.message,
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.7),
-                                      fontSize: 13,
-                                      height: 1.4,
-                                    ),
-                                  ),
+                                  Text(widget.message,
+                                      style: TextStyle(
+                                          color: Colors.white.withOpacity(0.7),
+                                          fontSize: 13,
+                                          height: 1.4)),
                                 ],
                               ),
                             ),
-                            // Close button
                             GestureDetector(
                               onTap: _dismiss,
-                              child: Icon(
-                                Icons.close_rounded,
-                                color: Colors.white.withOpacity(0.4),
-                                size: 18,
-                              ),
+                              child: Icon(Icons.close_rounded,
+                                  color: Colors.white.withOpacity(0.4),
+                                  size: 18),
                             ),
                           ],
                         ),
                       ),
-                      // Progress bar
                       _ProgressBar(
-                        duration: widget.duration,
-                        color: config.progressColor,
-                      ),
+                          duration: widget.duration,
+                          color: config.progressColor),
                     ],
                   ),
                 ),
@@ -278,7 +238,6 @@ class _ToastWidgetState extends State<_ToastWidget>
 class _ProgressBar extends StatefulWidget {
   final Duration duration;
   final Color color;
-
   const _ProgressBar({required this.duration, required this.color});
 
   @override
@@ -333,7 +292,7 @@ class _ToastConfig {
 }
 
 // =============================================
-// LOADING OVERLAY MODERNE
+// LOADING OVERLAY
 // =============================================
 
 class ModernLoadingOverlay {
@@ -368,29 +327,22 @@ class _ModernLoadingWidget extends StatelessWidget {
             tween: Tween<double>(begin: 0, end: 1),
             duration: const Duration(milliseconds: 400),
             curve: Curves.easeOutBack,
-            builder: (context, double value, child) {
-              return Transform.scale(
-                scale: value,
-                child: child,
-              );
-            },
+            builder: (context, double value, child) =>
+                Transform.scale(scale: value, child: child),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
               decoration: BoxDecoration(
                 color: const Color(0xFF1C1C1E),
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.5),
-                    blurRadius: 40,
-                    spreadRadius: 0,
-                  ),
+                      color: Colors.black.withOpacity(0.5), blurRadius: 40)
                 ],
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Animation plus moderne
                   SizedBox(
                     width: 44,
                     height: 44,
@@ -398,28 +350,25 @@ class _ModernLoadingWidget extends StatelessWidget {
                       children: [
                         const CircularProgressIndicator(
                           strokeWidth: 3,
-                          valueColor: AlwaysStoppedAnimation(Color(0xFFAB47BC)),
+                          valueColor:
+                              AlwaysStoppedAnimation(Color(0xFFAB47BC)),
                         ),
                         Center(
-                          child: Icon(
-                            Icons.favorite,
-                            color: const Color(0xFFAB47BC).withOpacity(0.5),
-                            size: 20,
-                          ),
+                          child: Icon(Icons.favorite,
+                              color:
+                                  const Color(0xFFAB47BC).withOpacity(0.5),
+                              size: 20),
                         ),
                       ],
                     ),
                   ),
                   if (message != null) ...[
                     const SizedBox(height: 16),
-                    Text(
-                      message!,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    Text(message!,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500)),
                   ],
                 ],
               ),
@@ -432,7 +381,7 @@ class _ModernLoadingWidget extends StatelessWidget {
 }
 
 // =============================================
-// TYPEWRITER TEXT ANIMATION
+// TYPEWRITER TEXT
 // =============================================
 
 class TypewriterText extends StatefulWidget {
@@ -440,6 +389,7 @@ class TypewriterText extends StatefulWidget {
   final Duration duration;
 
   const TypewriterText({
+    super.key,
     required this.text,
     this.duration = const Duration(milliseconds: 1500),
   });
@@ -456,19 +406,10 @@ class _TypewriterTextState extends State<TypewriterText>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: widget.duration,
-    );
-
-    _characterCount = IntTween(
-      begin: 0,
-      end: widget.text.length,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeInOut,
-    ));
-
+    _controller =
+        AnimationController(vsync: this, duration: widget.duration);
+    _characterCount = IntTween(begin: 0, end: widget.text.length).animate(
+        CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
     _controller.forward();
   }
 
@@ -482,16 +423,13 @@ class _TypewriterTextState extends State<TypewriterText>
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _characterCount,
-      builder: (context, child) {
-        return Text(
-          widget.text.substring(0, _characterCount.value),
-          style: const TextStyle(
+      builder: (context, child) => Text(
+        widget.text.substring(0, _characterCount.value),
+        style: const TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF9B27AF),
-          ),
-        );
-      },
+            color: Color(0xFF9B27AF)),
+      ),
     );
   }
 }
@@ -510,7 +448,7 @@ class ModernTextField extends StatefulWidget {
   final TextInputType keyboardType;
 
   const ModernTextField({
-    Key? key,
+    super.key,
     required this.controller,
     required this.hint,
     required this.icon,
@@ -518,7 +456,7 @@ class ModernTextField extends StatefulWidget {
     this.toggleObscure,
     this.validator,
     this.keyboardType = TextInputType.text,
-  }) : super(key: key);
+  });
 
   @override
   State<ModernTextField> createState() => _ModernTextFieldState();
@@ -533,9 +471,7 @@ class _ModernTextFieldState extends State<ModernTextField> {
   void initState() {
     super.initState();
     _focusNode = FocusNode();
-    _focusNode.addListener(() {
-      setState(() {});
-    });
+    _focusNode.addListener(() => setState(() {}));
   }
 
   @override
@@ -566,10 +502,9 @@ class _ModernTextFieldState extends State<ModernTextField> {
             boxShadow: _focusNode.hasFocus
                 ? [
                     BoxShadow(
-                      color: const Color(0xFFAB47BC).withOpacity(0.2),
-                      blurRadius: 8,
-                      spreadRadius: 2,
-                    ),
+                        color: const Color(0xFFAB47BC).withOpacity(0.2),
+                        blurRadius: 8,
+                        spreadRadius: 2)
                   ]
                 : [],
           ),
@@ -582,77 +517,56 @@ class _ModernTextFieldState extends State<ModernTextField> {
             style: const TextStyle(fontSize: 15),
             decoration: InputDecoration(
               hintText: widget.hint,
-              hintStyle: TextStyle(
-                color: Colors.grey.shade400,
-              ),
-              prefixIcon: Icon(
-                widget.icon,
-                color: _focusNode.hasFocus
-                    ? const Color(0xFFAB47BC)
-                    : Colors.grey.shade400,
-                size: 20,
-              ),
+              hintStyle: TextStyle(color: Colors.grey.shade400),
+              prefixIcon: Icon(widget.icon,
+                  color: _focusNode.hasFocus
+                      ? const Color(0xFFAB47BC)
+                      : Colors.grey.shade400,
+                  size: 20),
               suffixIcon: widget.toggleObscure != null
                   ? IconButton(
                       icon: Icon(
-                        widget.obscure
-                            ? Icons.visibility_off_outlined
-                            : Icons.visibility_outlined,
-                        color: _focusNode.hasFocus
-                            ? const Color(0xFFAB47BC)
-                            : Colors.grey.shade400,
-                        size: 20,
-                      ),
+                          widget.obscure
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
+                          color: _focusNode.hasFocus
+                              ? const Color(0xFFAB47BC)
+                              : Colors.grey.shade400,
+                          size: 20),
                       onPressed: widget.toggleObscure,
                     )
                   : null,
               filled: true,
-              fillColor: _hasError
-                  ? const Color(0xFFFEE7E7)
-                  : Colors.grey.shade50,
-              contentPadding: const EdgeInsets.symmetric(
-                vertical: 16,
-                horizontal: 12,
-              ),
+              fillColor:
+                  _hasError ? const Color(0xFFFEE7E7) : Colors.grey.shade50,
+              contentPadding:
+                  const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide.none,
-              ),
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: BorderSide(
-                  color: Colors.grey.shade200,
-                  width: 1,
-                ),
-              ),
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide:
+                      BorderSide(color: Colors.grey.shade200, width: 1)),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(
-                  color: Color(0xFFAB47BC),
-                  width: 2,
-                ),
-              ),
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide:
+                      const BorderSide(color: Color(0xFFAB47BC), width: 2)),
               errorBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(14),
-                borderSide: const BorderSide(
-                  color: Color(0xFFFF5252),
-                  width: 2,
-                ),
-              ),
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide:
+                      const BorderSide(color: Color(0xFFFF5252), width: 2)),
             ),
           ),
         ),
         if (_hasError)
           Padding(
             padding: const EdgeInsets.only(left: 12, top: 6),
-            child: Text(
-              _errorText ?? '',
-              style: const TextStyle(
-                color: Color(0xFFFF5252),
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
+            child: Text(_errorText ?? '',
+                style: const TextStyle(
+                    color: Color(0xFFFF5252),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500)),
           ),
       ],
     );
@@ -660,7 +574,7 @@ class _ModernTextFieldState extends State<ModernTextField> {
 }
 
 // =============================================
-// SOCIAL BUTTONS
+// SOCIAL BUTTON
 // =============================================
 
 class SocialButton extends StatelessWidget {
@@ -670,12 +584,12 @@ class SocialButton extends StatelessWidget {
   final VoidCallback onPressed;
 
   const SocialButton({
-    Key? key,
+    super.key,
     required this.icon,
     required this.label,
     required this.color,
     required this.onPressed,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -687,20 +601,15 @@ class SocialButton extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey.shade300),
-            borderRadius: BorderRadius.circular(12),
-          ),
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(12)),
           child: Column(
             children: [
               Icon(icon, color: color),
               const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.grey.shade600,
-                ),
-              ),
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 11, color: Colors.grey.shade600)),
             ],
           ),
         ),
@@ -723,10 +632,7 @@ class Validators {
 
   static String? validatePassword(String? value) {
     if (value == null || value.isEmpty) return "Le mot de passe est requis";
-    if (value.length < 8) return "Minimum 8 caractères";
-    if (!value.contains(RegExp(r'[A-Z]'))) return "Une majuscule requise";
-    if (!value.contains(RegExp(r'[a-z]'))) return "Une minuscule requise";
-    if (!value.contains(RegExp(r'[0-9]'))) return "Un chiffre requis";
+    if (value.length < 6) return "Minimum 6 caractères";
     return null;
   }
 
@@ -748,154 +654,39 @@ class Validators {
 // =============================================
 
 class SocialAuthService {
-  // Pour Google
   static Future<void> signInWithGoogle(BuildContext context) async {
     ModernLoadingOverlay.show(context, message: "Connexion avec Google...");
-    
-    try {
-      // ICI vous devez implémenter la vraie logique Google Sign-In
-      // avec le package google_sign_in
-      
-      // Exemple avec google_sign_in (à ajouter dans pubspec.yaml) :
-      /*
-      final GoogleSignIn googleSignIn = GoogleSignIn();
-      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
-      
-      if (googleUser != null) {
-        final GoogleSignInAuthentication googleAuth = 
-            await googleUser.authentication;
-        
-        // Envoyer le token à votre backend
-        var response = await http.post(
-          Uri.parse('http://localhost:5000/api/auth/google'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'idToken': googleAuth.idToken,
-            'accessToken': googleAuth.accessToken,
-          }),
-        );
-        
-        if (response.statusCode == 200) {
-          // Connexion réussie
-        }
-      }
-      */
-      
-      await Future.delayed(const Duration(seconds: 2)); // Simulation
-      
-      ModernLoadingOverlay.hide();
-      ModernToast.show(
-        context,
+    await Future.delayed(const Duration(seconds: 2));
+    ModernLoadingOverlay.hide();
+    ModernToast.show(context,
         title: "Google",
         message: "Connexion Google réussie !",
-        type: ToastType.success,
-      );
-    } catch (e) {
-      ModernLoadingOverlay.hide();
-      ModernToast.show(
-        context,
-        title: "Erreur",
-        message: "Échec de la connexion Google",
-        type: ToastType.error,
-      );
-    }
+        type: ToastType.success);
   }
 
-  // Pour Facebook
   static Future<void> signInWithFacebook(BuildContext context) async {
     ModernLoadingOverlay.show(context, message: "Connexion avec Facebook...");
-    
-    try {
-      // ICI vous devez implémenter la vraie logique Facebook Login
-      // avec le package flutter_facebook_auth
-      
-      /*
-      final LoginResult result = await FacebookAuth.instance.login();
-      
-      if (result.status == LoginStatus.success) {
-        final AccessToken accessToken = result.accessToken!;
-        
-        // Envoyer le token à votre backend
-        var response = await http.post(
-          Uri.parse('http://localhost:5000/api/auth/facebook'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'accessToken': accessToken.token,
-          }),
-        );
-      }
-      */
-      
-      await Future.delayed(const Duration(seconds: 2)); // Simulation
-      
-      ModernLoadingOverlay.hide();
-      ModernToast.show(
-        context,
+    await Future.delayed(const Duration(seconds: 2));
+    ModernLoadingOverlay.hide();
+    ModernToast.show(context,
         title: "Facebook",
         message: "Connexion Facebook réussie !",
-        type: ToastType.success,
-      );
-    } catch (e) {
-      ModernLoadingOverlay.hide();
-      ModernToast.show(
-        context,
-        title: "Erreur",
-        message: "Échec de la connexion Facebook",
-        type: ToastType.error,
-      );
-    }
+        type: ToastType.success);
   }
 
-  // Pour Apple
   static Future<void> signInWithApple(BuildContext context) async {
     ModernLoadingOverlay.show(context, message: "Connexion avec Apple...");
-    
-    try {
-      // ICI vous devez implémenter la vraie logique Apple Sign-In
-      // avec le package sign_in_with_apple
-      
-      /*
-      final credential = await SignInWithApple.getAppleIDCredential(
-        scopes: [
-          AppleIDAuthorizationScopes.email,
-          AppleIDAuthorizationScopes.fullName,
-        ],
-      );
-      
-      // Envoyer les credentials à votre backend
-      var response = await http.post(
-        Uri.parse('http://localhost:5000/api/auth/apple'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'identityToken': credential.identityToken,
-          'authorizationCode': credential.authorizationCode,
-        }),
-      );
-      */
-      
-      await Future.delayed(const Duration(seconds: 2)); // Simulation
-      
-      ModernLoadingOverlay.hide();
-      ModernToast.show(
-        context,
+    await Future.delayed(const Duration(seconds: 2));
+    ModernLoadingOverlay.hide();
+    ModernToast.show(context,
         title: "Apple",
         message: "Connexion Apple réussie !",
-        type: ToastType.success,
-      );
-    } catch (e) {
-      ModernLoadingOverlay.hide();
-      ModernToast.show(
-        context,
-        title: "Erreur",
-        message: "Échec de la connexion Apple",
-        type: ToastType.error,
-      );
-    }
+        type: ToastType.success);
   }
 }
 
 // =============================================
-// LOGIN PAGE AMÉLIORÉE
+// LOGIN PAGE CORRIGÉE
 // =============================================
 
 class LoginPage extends StatefulWidget {
@@ -911,44 +702,36 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   bool obscureConfirm = true;
   bool isLoading = false;
 
-  final TextEditingController fullnameController = TextEditingController();
-  final TextEditingController emailController = TextEditingController();
-  final TextEditingController passwordController = TextEditingController();
-  final TextEditingController confirmController = TextEditingController();
-
-  late AnimationController _toggleAnimationController;
-  late Animation<double> _toggleAnimation;
-
+  final fullnameController = TextEditingController();
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+  final confirmController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
-  // ================= HELPERS =================
-
-  void _showToast({
-    required String title,
-    required String message,
-    required ToastType type,
-  }) {
-    ModernToast.show(
-      context,
-      title: title,
-      message: message,
-      type: type,
-    );
-  }
-
-  // ================= INIT =================
+  late AnimationController _toggleAnimationController;
+  final ApiService _apiService = ApiService(); // Instance d'ApiService
 
   @override
   void initState() {
     super.initState();
     _toggleAnimationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-    _toggleAnimation = CurvedAnimation(
-      parent: _toggleAnimationController,
-      curve: Curves.easeInOut,
-    );
+        vsync: this, duration: const Duration(milliseconds: 300));
+    
+    // Vérifier si déjà connecté
+    _checkIfLoggedIn();
+  }
+
+  Future<void> _checkIfLoggedIn() async {
+    final token = await _apiService.getToken();
+    if (token != null) {
+      debugPrint('🔑 Token existant trouvé, redirection vers HomePage');
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomePage()),
+        );
+      }
+    }
   }
 
   @override
@@ -961,13 +744,18 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  // ================= VALIDATION =================
+  void _showToast(
+      {required String title,
+      required String message,
+      required ToastType type}) {
+    ModernToast.show(context, title: title, message: message, type: type);
+  }
 
   void validateAndSubmit() async {
+    FocusScope.of(context).unfocus();
     if (_formKey.currentState?.validate() ?? false) {
-      String email = emailController.text.trim();
-      String password = passwordController.text.trim();
-
+      final email = emailController.text.trim();
+      final password = passwordController.text.trim();
       if (!isLogin) {
         await registerUser(fullnameController.text.trim(), email, password);
       } else {
@@ -976,230 +764,225 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     }
   }
 
-  // ================= BACKEND =================
-
-  Future<void> registerUser(String name, String email, String password) async {
+  Future<void> registerUser(
+      String username, String email, String password) async {
     setState(() => isLoading = true);
     ModernLoadingOverlay.show(context, message: "Création du compte...");
     try {
-      var url = Uri.parse('http://localhost:5001/api/auth/register');
-      var response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'name': name, 'email': email, 'password': password}),
-      );
+      final response = await http
+          .post(
+            Uri.parse('$_baseUrl/api/auth/register'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'username': username,
+              'email': email,
+              'password': password,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
 
-      var data = jsonDecode(response.body);
+      final data = jsonDecode(response.body);
       ModernLoadingOverlay.hide();
 
       if (response.statusCode == 201) {
         _showToast(
-          title: "Compte créé !",
-          message: data['message'] ?? "Bienvenue sur wejoy 🎉",
-          type: ToastType.success,
-        );
+            title: "Compte créé !",
+            message: data['message'] ?? "Bienvenue sur WeJoy 🎉",
+            type: ToastType.success);
         setState(() {
           isLogin = true;
           _toggleAnimationController.forward(from: 0);
         });
       } else {
         _showToast(
-          title: "Inscription échouée",
-          message: data['message'] ?? "Une erreur est survenue.",
-          type: ToastType.error,
-        );
+            title: "Inscription échouée",
+            message: data['message'] ?? "Une erreur est survenue.",
+            type: ToastType.error);
       }
     } catch (e) {
       ModernLoadingOverlay.hide();
       _showToast(
-        title: "Erreur de connexion",
-        message: "Impossible de contacter le serveur.",
-        type: ToastType.error,
-      );
+          title: "Erreur de connexion",
+          message: "Impossible de contacter le serveur.",
+          type: ToastType.error);
+      debugPrint('❌ Register error: $e');
     } finally {
       setState(() => isLoading = false);
     }
   }
 
- Future<void> loginUser(String email, String password) async {
-  setState(() => isLoading = true);
-  ModernLoadingOverlay.show(context, message: "Connexion en cours...");
-
-  try {
-    var url = Uri.parse('http://localhost:5001/api/auth/login');
-    var response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'email': email, 'password': password}),
-    );
-
-    var data = jsonDecode(response.body);
-    ModernLoadingOverlay.hide();
-
-    if (response.statusCode == 200) {
-      String token = data['token'];
-      _showToast(
-        title: "Connecté !",
-        message: data['message'] ?? "Bon retour sur wejoy 👋",
-        type: ToastType.success,
-      );
-      print("Token JWT : $token");
-
-      // ← Navigation vers la HomePage
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
-      );
-
-    } else {
-      _showToast(
-        title: "Connexion refusée",
-        message: data['message'] ?? "Email ou mot de passe incorrect.",
-        type: ToastType.error,
-      );
-    }
-  } catch (e) {
-    ModernLoadingOverlay.hide();
-    _showToast(
-      title: "Erreur de connexion",
-      message: "Impossible de contacter le serveur.",
-      type: ToastType.error,
-    );
-  } finally {
-    setState(() => isLoading = false);
-  }
-}
-  Future<void> forgotPassword() async {
-    String email = emailController.text.trim();
-
-    if (email.isEmpty || !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
-      _showToast(
-        title: "Email requis",
-        message: "Entrez un email valide pour réinitialiser le mot de passe.",
-        type: ToastType.warning,
-      );
-      return;
-    }
-
-    ModernLoadingOverlay.show(context, message: "Envoi en cours...");
-
+  // 🔥 MÉTHODE LOGIN CORRIGÉE AVEC SAUVEGARDE DU TOKEN
+  Future<void> loginUser(String email, String password) async {
+    setState(() => isLoading = true);
+    ModernLoadingOverlay.show(context, message: "Connexion en cours...");
     try {
-      var url = Uri.parse('http://localhost:5000/api/auth/forgot-password');
-      var response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email}),
-      );
+      final response = await http
+          .post(
+            Uri.parse('$_baseUrl/api/auth/login'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'email': email, 'password': password}),
+          )
+          .timeout(const Duration(seconds: 10));
 
-      var data = jsonDecode(response.body);
+      final data = jsonDecode(response.body);
       ModernLoadingOverlay.hide();
 
       if (response.statusCode == 200) {
+        final String token = data['token'];
+        debugPrint('✅ Token JWT reçu: $token');
+        
+        // 🔥 SAUVEGARDE DU TOKEN DANS APISERVICE
+        await _apiService.saveToken(token);
+        debugPrint('💾 Token sauvegardé avec succès');
+
+        // Vérification que le token est bien sauvegardé
+        final savedToken = await _apiService.getToken();
+        debugPrint('🔑 Token récupéré après sauvegarde: ${savedToken != null ? "OK" : "NULL"}');
+
         _showToast(
-          title: "Email envoyé !",
-          message: data['message'] ?? "Vérifiez votre boîte mail.",
-          type: ToastType.success,
+            title: "Connecté !",
+            message: "Bon retour sur WeJoy 👋",
+            type: ToastType.success);
+
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (!mounted) return;
+
+        // Navigation vers HomePage
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomePage()),
         );
       } else {
         _showToast(
-          title: "Erreur",
-          message: data['message'] ?? "Une erreur est survenue.",
-          type: ToastType.error,
-        );
+            title: "Connexion refusée",
+            message: data['message'] ?? "Email ou mot de passe incorrect.",
+            type: ToastType.error);
       }
     } catch (e) {
       ModernLoadingOverlay.hide();
       _showToast(
-        title: "Erreur de connexion",
-        message: "Impossible de contacter le serveur.",
-        type: ToastType.error,
-      );
+          title: "Erreur de connexion",
+          message: "Impossible de contacter le serveur.",
+          type: ToastType.error);
+      debugPrint('❌ Login error: $e');
+    } finally {
+      setState(() => isLoading = false);
     }
   }
 
-  // =================================================
+  Future<void> forgotPassword() async {
+    final email = emailController.text.trim();
+    if (email.isEmpty ||
+        !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
+      _showToast(
+          title: "Email requis",
+          message: "Entrez un email valide.",
+          type: ToastType.warning);
+      return;
+    }
+    ModernLoadingOverlay.show(context, message: "Envoi en cours...");
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$_baseUrl/api/auth/forgot-password'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'email': email}),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      final data = jsonDecode(response.body);
+      ModernLoadingOverlay.hide();
+
+      if (response.statusCode == 200) {
+        _showToast(
+            title: "Email envoyé !",
+            message: data['message'] ?? "Vérifiez votre boîte mail.",
+            type: ToastType.success);
+      } else {
+        _showToast(
+            title: "Erreur",
+            message: data['message'] ?? "Une erreur est survenue.",
+            type: ToastType.error);
+      }
+    } catch (e) {
+      ModernLoadingOverlay.hide();
+      _showToast(
+          title: "Erreur",
+          message: "Impossible de contacter le serveur.",
+          type: ToastType.error);
+      debugPrint('❌ ForgotPassword error: $e');
+    }
+  }
 
   Widget _buildRegisterFields() {
     return Column(
+      key: const ValueKey('register'),
       children: [
         ModernTextField(
-          controller: fullnameController,
-          hint: "Nom complet",
-          icon: Icons.person_outline,
-          validator: Validators.validateName,
-        ),
+            controller: fullnameController,
+            hint: "Nom complet",
+            icon: Icons.person_outline,
+            validator: Validators.validateName),
         const SizedBox(height: 14),
         ModernTextField(
-          controller: emailController,
-          hint: "Email",
-          icon: Icons.email_outlined,
-          keyboardType: TextInputType.emailAddress,
-          validator: Validators.validateEmail,
-        ),
+            controller: emailController,
+            hint: "Email",
+            icon: Icons.email_outlined,
+            keyboardType: TextInputType.emailAddress,
+            validator: Validators.validateEmail),
         const SizedBox(height: 14),
         ModernTextField(
-          controller: passwordController,
-          hint: "Mot de passe",
-          icon: Icons.lock_outline,
-          obscure: obscurePassword,
-          toggleObscure: () {
-            setState(() => obscurePassword = !obscurePassword);
-          },
-          validator: Validators.validatePassword,
-        ),
+            controller: passwordController,
+            hint: "Mot de passe",
+            icon: Icons.lock_outline,
+            obscure: obscurePassword,
+            toggleObscure: () =>
+                setState(() => obscurePassword = !obscurePassword),
+            validator: Validators.validatePassword),
         const SizedBox(height: 14),
         ModernTextField(
-          controller: confirmController,
-          hint: "Confirmer mot de passe",
-          icon: Icons.lock_outline,
-          obscure: obscureConfirm,
-          toggleObscure: () {
-            setState(() => obscureConfirm = !obscureConfirm);
-          },
-          validator: (value) => Validators.validateConfirmPassword(
-            value,
-            passwordController.text,
-          ),
-        ),
+            controller: confirmController,
+            hint: "Confirmer mot de passe",
+            icon: Icons.lock_outline,
+            obscure: obscureConfirm,
+            toggleObscure: () =>
+                setState(() => obscureConfirm = !obscureConfirm),
+            validator: (v) => Validators.validateConfirmPassword(
+                v, passwordController.text)),
       ],
     );
   }
 
   Widget _buildLoginFields() {
     return Column(
+      key: const ValueKey('login'),
       children: [
         ModernTextField(
-          controller: emailController,
-          hint: "Email",
-          icon: Icons.email_outlined,
-          keyboardType: TextInputType.emailAddress,
-          validator: Validators.validateEmail,
-        ),
+            controller: emailController,
+            hint: "Email",
+            icon: Icons.email_outlined,
+            keyboardType: TextInputType.emailAddress,
+            validator: Validators.validateEmail),
         const SizedBox(height: 14),
         ModernTextField(
-          controller: passwordController,
-          hint: "Mot de passe",
-          icon: Icons.lock_outline,
-          obscure: obscurePassword,
-          toggleObscure: () {
-            setState(() => obscurePassword = !obscurePassword);
-          },
-          validator: Validators.validatePassword,
-        ),
+            controller: passwordController,
+            hint: "Mot de passe",
+            icon: Icons.lock_outline,
+            obscure: obscurePassword,
+            toggleObscure: () =>
+                setState(() => obscurePassword = !obscurePassword),
+            validator: Validators.validatePassword),
         Align(
           alignment: Alignment.centerRight,
           child: GestureDetector(
             onTap: forgotPassword,
             child: const Padding(
               padding: EdgeInsets.only(top: 8),
-              child: Text(
-                "Mot de passe oublié ?",
-                style: TextStyle(
-                  color: Color(0xFFAB47BC),
-                  fontWeight: FontWeight.w500,
-                  decoration: TextDecoration.underline,
-                ),
-              ),
+              child: Text("Mot de passe oublié ?",
+                  style: TextStyle(
+                      color: Color(0xFFAB47BC),
+                      fontWeight: FontWeight.w500,
+                      decoration: TextDecoration.underline)),
             ),
           ),
         ),
@@ -1210,54 +993,72 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   Widget _buildSocialButtons() {
     return Column(
       children: [
-        const Row(
-          children: [
-            Expanded(child: Divider()),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                "Ou continuer avec",
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 13,
-                ),
-              ),
-            ),
-            Expanded(child: Divider()),
-          ],
-        ),
+        Row(children: [
+          const Expanded(child: Divider()),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text("Ou continuer avec",
+                style:
+                    TextStyle(color: Colors.grey.shade500, fontSize: 13)),
+          ),
+          const Expanded(child: Divider()),
+        ]),
         const SizedBox(height: 20),
         Row(
           children: [
             Expanded(
-              child: SocialButton(
-                icon: Icons.g_mobiledata,
-                label: "Google",
-                color: const Color(0xFFDB4437),
-                onPressed: () => SocialAuthService.signInWithGoogle(context),
-              ),
-            ),
+                child: SocialButton(
+                    icon: Icons.g_mobiledata,
+                    label: "Google",
+                    color: const Color(0xFFDB4437),
+                    onPressed: () =>
+                        SocialAuthService.signInWithGoogle(context))),
             const SizedBox(width: 12),
             Expanded(
-              child: SocialButton(
-                icon: Icons.facebook,
-                label: "Facebook",
-                color: const Color(0xFF4267B2),
-                onPressed: () => SocialAuthService.signInWithFacebook(context),
-              ),
-            ),
+                child: SocialButton(
+                    icon: Icons.facebook,
+                    label: "Facebook",
+                    color: const Color(0xFF4267B2),
+                    onPressed: () =>
+                        SocialAuthService.signInWithFacebook(context))),
             const SizedBox(width: 12),
             Expanded(
-              child: SocialButton(
-                icon: Icons.apple,
-                label: "Apple",
-                color: Colors.black,
-                onPressed: () => SocialAuthService.signInWithApple(context),
-              ),
-            ),
+                child: SocialButton(
+                    icon: Icons.apple,
+                    label: "Apple",
+                    color: Colors.black,
+                    onPressed: () =>
+                        SocialAuthService.signInWithApple(context))),
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildTab(String label, bool isActive, VoidCallback onTap) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            gradient: isActive
+                ? const LinearGradient(
+                    colors: [Color(0xFFAB47BC), Color(0xFFE91E8C)])
+                : null,
+            borderRadius: BorderRadius.circular(30),
+          ),
+          child: Center(
+            child: Text(label,
+                style: TextStyle(
+                    color: isActive ? Colors.white : Colors.grey,
+                    fontWeight: isActive
+                        ? FontWeight.bold
+                        : FontWeight.normal)),
+          ),
+        ),
+      ),
     );
   }
 
@@ -1283,17 +1084,12 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
             child: Column(
               children: [
                 const SizedBox(height: 20),
-                // Logo avec animation
                 TweenAnimationBuilder(
                   tween: Tween<double>(begin: 0, end: 1),
                   duration: const Duration(milliseconds: 800),
                   curve: Curves.elasticOut,
-                  builder: (context, double value, child) {
-                    return Transform.scale(
-                      scale: value,
-                      child: child,
-                    );
-                  },
+                  builder: (context, double value, child) =>
+                      Transform.scale(scale: value, child: child),
                   child: Container(
                     width: 80,
                     height: 80,
@@ -1305,26 +1101,17 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                         end: Alignment.bottomRight,
                       ),
                     ),
-                    child: const Icon(
-                      Icons.groups,
-                      color: Colors.white,
-                      size: 38,
-                    ),
+                    child: const Icon(Icons.groups,
+                        color: Colors.white, size: 38),
                   ),
                 ),
                 const SizedBox(height: 16),
-                // Titre avec effet typewriter
                 const TypewriterText(text: "wejoy"),
                 const SizedBox(height: 6),
-                const Text(
-                  "Bienvenue dans votre espace bien-être",
-                  style: TextStyle(
-                    color: Color(0xFFAB47BC),
-                    fontSize: 14,
-                  ),
-                ),
+                const Text("Bienvenue dans votre espace bien-être",
+                    style: TextStyle(
+                        color: Color(0xFFAB47BC), fontSize: 14)),
                 const SizedBox(height: 30),
-                // Formulaire
                 Container(
                   width: 360,
                   padding: const EdgeInsets.all(24),
@@ -1333,153 +1120,97 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.purple.shade100.withOpacity(0.5),
-                        blurRadius: 30,
-                        spreadRadius: 5,
-                      )
+                          color: Colors.purple.shade100.withOpacity(0.5),
+                          blurRadius: 30,
+                          spreadRadius: 5)
                     ],
                   ),
                   child: Form(
                     key: _formKey,
                     child: Column(
                       children: [
-                        // ===== Onglets =====
                         Container(
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(30),
-                          ),
+                              color: Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(30)),
                           child: Row(
                             children: [
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      isLogin = true;
-                                      _toggleAnimationController.forward(from: 0);
-                                    });
-                                  },
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 300),
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                    decoration: BoxDecoration(
-                                      gradient: isLogin
-                                          ? const LinearGradient(
-                                              colors: [Color(0xFFAB47BC), Color(0xFFE91E8C)],
-                                            )
-                                          : null,
-                                      borderRadius: BorderRadius.circular(30),
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        "Connexion",
-                                        style: TextStyle(
-                                          color: isLogin ? Colors.white : Colors.grey,
-                                          fontWeight: isLogin ? FontWeight.bold : FontWeight.normal,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      isLogin = false;
-                                      _toggleAnimationController.forward(from: 0);
-                                    });
-                                  },
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 300),
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                    decoration: BoxDecoration(
-                                      gradient: !isLogin
-                                          ? const LinearGradient(
-                                              colors: [Color(0xFFAB47BC), Color(0xFFE91E8C)],
-                                            )
-                                          : null,
-                                      borderRadius: BorderRadius.circular(30),
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        "Inscription",
-                                        style: TextStyle(
-                                          color: !isLogin ? Colors.white : Colors.grey,
-                                          fontWeight: !isLogin ? FontWeight.bold : FontWeight.normal,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
+                              _buildTab("Connexion", isLogin, () {
+                                setState(() {
+                                  isLogin = true;
+                                  _toggleAnimationController.forward(from: 0);
+                                });
+                              }),
+                              _buildTab("Inscription", !isLogin, () {
+                                setState(() {
+                                  isLogin = false;
+                                  _toggleAnimationController.forward(from: 0);
+                                });
+                              }),
                             ],
                           ),
                         ),
                         const SizedBox(height: 24),
-                        // Champs animés
                         AnimatedSwitcher(
                           duration: const Duration(milliseconds: 300),
-                          transitionBuilder: (Widget child, Animation<double> animation) {
-                            return FadeTransition(
-                              opacity: animation,
-                              child: SlideTransition(
-                                position: Tween<Offset>(
-                                  begin: const Offset(0.05, 0),
-                                  end: Offset.zero,
-                                ).animate(CurvedAnimation(
-                                  parent: animation,
-                                  curve: Curves.easeOutQuad,
-                                )),
-                                child: child,
+                          transitionBuilder: (child, animation) =>
+                              FadeTransition(
+                                opacity: animation,
+                                child: SlideTransition(
+                                  position: Tween<Offset>(
+                                          begin: const Offset(0.05, 0),
+                                          end: Offset.zero)
+                                      .animate(CurvedAnimation(
+                                          parent: animation,
+                                          curve: Curves.easeOutQuad)),
+                                  child: child,
+                                ),
                               ),
-                            );
-                          },
                           child: !isLogin
                               ? _buildRegisterFields()
                               : _buildLoginFields(),
                         ),
                         const SizedBox(height: 20),
-                        // Bouton principal
-                        Container(
+                        SizedBox(
                           width: double.infinity,
                           height: 52,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFAB47BC), Color(0xFFE91E8C)],
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(colors: [
+                                Color(0xFFAB47BC),
+                                Color(0xFFE91E8C)
+                              ]),
+                              borderRadius: BorderRadius.circular(14),
                             ),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: ElevatedButton(
-                            onPressed: isLoading ? null : validateAndSubmit,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              shadowColor: Colors.transparent,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(14),
+                            child: ElevatedButton(
+                              onPressed:
+                                  isLoading ? null : validateAndSubmit,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                shadowColor: Colors.transparent,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14)),
                               ),
+                              child: isLoading
+                                  ? const SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2.5,
+                                          valueColor: AlwaysStoppedAnimation(
+                                              Colors.white)))
+                                  : Text(
+                                      isLogin
+                                          ? "Se connecter"
+                                          : "Créer un Compte",
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600)),
                             ),
-                            child: isLoading
-                                ? const SizedBox(
-                                    width: 22,
-                                    height: 22,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.5,
-                                      valueColor: AlwaysStoppedAnimation(Colors.white),
-                                    ),
-                                  )
-                                : Text(
-                                    isLogin ? "Se connecter" : "Créer un Compte",
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
                           ),
                         ),
                         const SizedBox(height: 20),
-                        // Boutons sociaux
                         _buildSocialButtons(),
                       ],
                     ),
@@ -1493,4 +1224,4 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       ),
     );
   }
-  }
+}
