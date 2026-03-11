@@ -1,8 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:wejoy/screens/service/admin_api_service.dart';
 import 'package:wejoy/screens/splash_screen.dart';
+import 'package:wejoy/screens/login_page.dart';
+import 'package:wejoy/screens/home_page_connected.dart';
+import 'package:wejoy/screens/admin/admin_shell.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AdminApiService()),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -17,7 +29,14 @@ class MyApp extends StatelessWidget {
         fontFamily: 'Roboto',
         useMaterial3: true,
       ),
-      home: const SplashScreen(),
+      // ✅ Routes nommées pour que Navigator.pushReplacementNamed fonctionne
+      initialRoute: '/',
+      routes: {
+        '/':       (_) => const SplashScreen(),
+        '/login':  (_) => const LoginPage(),
+        '/home':   (_) => const HomePage(),
+        '/admin':  (_) => const AdminShell(),
+      },
     );
   }
 }

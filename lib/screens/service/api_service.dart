@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-const String baseUrl = 'http://192.168.1.11:5000';
+const String baseUrl = 'http://localhost:5001';
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
@@ -35,33 +35,26 @@ class ApiService {
 
   // ─── Headers ─────────────────────────────────────────────────────────────
   Future<Map<String, String>> _headers({bool auth = true}) async {
-    final headers = {'Content-Type': 'application/json'};
+    final headers = <String, String>{'Content-Type': 'application/json'};
     if (auth) {
       final token = await getToken();
-      if (token != null) {
-        headers['Authorization'] = 'Bearer $token';
-      }
+      if (token != null) headers['Authorization'] = 'Bearer $token';
     }
     return headers;
   }
 
-  // ─── Gestion des réponses ───────────────────────────────────────────────
+  // ─── Gestion des réponses ─────────────────────────────────────────────────
   dynamic _handleResponse(http.Response response) {
     print('📡 Status: ${response.statusCode}');
-    
     try {
       final body = jsonDecode(response.body);
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        return body;
-      }
+      if (response.statusCode >= 200 && response.statusCode < 300) return body;
       throw ApiException(
         statusCode: response.statusCode,
         message: body['message'] ?? 'Erreur inconnue',
       );
     } catch (e) {
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        return null;
-      }
+      if (response.statusCode >= 200 && response.statusCode < 300) return null;
       throw ApiException(
         statusCode: response.statusCode,
         message: 'Erreur de communication avec le serveur',
@@ -80,17 +73,11 @@ class ApiService {
         headers: await _headers(auth: false),
         body: jsonEncode({'email': email, 'password': password}),
       ).timeout(const Duration(seconds: 10));
-
       final data = _handleResponse(response);
-      if (data['token'] != null) {
-        await saveToken(data['token']);
-      }
+      if (data['token'] != null) await saveToken(data['token']);
       return data;
     } catch (e) {
-      throw ApiException(
-        statusCode: 0,
-        message: 'Impossible de contacter le serveur',
-      );
+      throw ApiException(statusCode: 0, message: 'Impossible de contacter le serveur');
     }
   }
 
@@ -102,21 +89,14 @@ class ApiService {
     final response = await http.post(
       Uri.parse('$baseUrl/api/auth/register'),
       headers: await _headers(auth: false),
-      body: jsonEncode({
-        'username': username,
-        'email': email,
-        'password': password,
-      }),
+      body: jsonEncode({'username': username, 'email': email, 'password': password}),
     );
     return _handleResponse(response);
   }
 
   Future<void> logout() async {
     try {
-      await http.post(
-        Uri.parse('$baseUrl/api/auth/logout'),
-        headers: await _headers(),
-      );
+      await http.post(Uri.parse('$baseUrl/api/auth/logout'), headers: await _headers());
     } finally {
       await clearToken();
     }
@@ -130,30 +110,14 @@ class ApiService {
     try {
       final token = await getToken();
       if (token == null) return null;
-
       final response = await http.get(
         Uri.parse('$baseUrl/api/users/me'),
         headers: await _headers(),
       );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return UserProfile.fromJson(data);
-      } else if (response.statusCode == 401) {
-        await clearToken();
-        throw ApiException(
-          statusCode: 401,
-          message: 'Session expirée',
-        );
-      } else {
-        throw ApiException(
-          statusCode: response.statusCode,
-          message: 'Erreur de chargement du profil',
-        );
-      }
-    } catch (e) {
-      rethrow;
-    }
+      if (response.statusCode == 200) return UserProfile.fromJson(jsonDecode(response.body));
+      if (response.statusCode == 401) { await clearToken(); throw ApiException(statusCode: 401, message: 'Session expirée'); }
+      throw ApiException(statusCode: response.statusCode, message: 'Erreur de chargement du profil');
+    } catch (e) { rethrow; }
   }
 
   Future<UserProfile> updateProfile(Map<String, dynamic> data) async {
@@ -177,29 +141,49 @@ class ApiService {
       );
       final List data = _handleResponse(response);
       return data.map((e) => Activity.fromJson(e)).toList();
-    } catch (e) {
-      return [];
-    }
+    } catch (e) { return []; }
   }
 
-  Future<List<Activity>> getAllActivities({
-    String? category,
-    String? search,
-  }) async {
+  Future<List<Activity>> getAllActivities({String? category, String? search}) async {
     try {
       final params = <String, String>{};
       if (category != null && category != 'Tous') params['category'] = category;
       if (search != null && search.isNotEmpty) params['search'] = search;
-
       final uri = Uri.parse('$baseUrl/api/activities')
           .replace(queryParameters: params.isEmpty ? null : params);
-
       final response = await http.get(uri, headers: await _headers());
       final List data = _handleResponse(response);
       return data.map((e) => Activity.fromJson(e)).toList();
-    } catch (e) {
-      return [];
-    }
+    } catch (e) { return []; }
+  }
+
+  // ✅ NOUVEAU : créer une activité (utilisé par activitie_page)
+  Future<Map<String, dynamic>> createActivity(Map<String, dynamic> data) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/activities'),
+      headers: await _headers(),
+      body: jsonEncode(data),
+    );
+    return _handleResponse(response);
+  }
+
+  // ✅ NOUVEAU : modifier une activité
+  Future<Map<String, dynamic>> updateActivity(String id, Map<String, dynamic> data) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/api/activities/$id'),
+      headers: await _headers(),
+      body: jsonEncode(data),
+    );
+    return _handleResponse(response);
+  }
+
+  // ✅ NOUVEAU : supprimer une activité
+  Future<void> deleteActivity(String id) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/api/activities/$id'),
+      headers: await _headers(),
+    );
+    _handleResponse(response);
   }
 
   Future<void> joinActivity(String activityId) async {
@@ -211,7 +195,7 @@ class ApiService {
   }
 
   Future<void> leaveActivity(String activityId) async {
-    final response = await http.delete(
+    final response = await http.post(
       Uri.parse('$baseUrl/api/activities/$activityId/leave'),
       headers: await _headers(),
     );
@@ -226,10 +210,7 @@ class ApiService {
     await http.post(
       Uri.parse('$baseUrl/api/moods'),
       headers: await _headers(),
-      body: jsonEncode({
-        'mood': mood, 
-        'date': DateTime.now().toIso8601String()
-      }),
+      body: jsonEncode({'mood': mood, 'date': DateTime.now().toIso8601String()}),
     );
   }
 
@@ -244,20 +225,15 @@ class ApiService {
         headers: await _headers(),
       );
       return _handleResponse(response);
-    } catch (e) {
-      return [];
-    }
+    } catch (e) { return []; }
   }
 
   Future<bool> checkHealth() async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/api/health'),
-      ).timeout(const Duration(seconds: 3));
+      final response = await http.get(Uri.parse('$baseUrl/api/health'))
+          .timeout(const Duration(seconds: 3));
       return response.statusCode == 200;
-    } catch (_) {
-      return false;
-    }
+    } catch (_) { return false; }
   }
 }
 
@@ -266,7 +242,6 @@ class ApiException implements Exception {
   final int statusCode;
   final String message;
   ApiException({required this.statusCode, required this.message});
-
   @override
   String toString() => 'ApiException($statusCode): $message';
 }
@@ -296,24 +271,22 @@ class UserProfile {
     this.avatarUrl,
   });
 
-  factory UserProfile.fromJson(Map<String, dynamic> json) {
-    return UserProfile(
-      id: json['_id'] ?? json['id'] ?? '',
-      username: json['username'] ?? json['name'] ?? 'Utilisateur',
-      email: json['email'] ?? '',
-      memberSince: json['memberSince'] ?? json['createdAt'] ?? json['joinedAt'] ?? 'Janvier 2025',
-      points: json['points'] ?? 1250,
-      badges: json['badges'] ?? 3,
-      interests: List<String>.from(json['interests'] ?? ['Cuisine', 'Lecture']),
-      avatarUrl: json['avatarUrl'] ?? json['avatar'],
-    );
-  }
+  factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
+    id:           json['_id'] ?? json['id'] ?? '',
+    username:     json['username'] ?? json['name'] ?? 'Utilisateur',
+    email:        json['email'] ?? '',
+    memberSince:  json['memberSince'] ?? json['createdAt'] ?? json['joinedAt'] ?? 'Janvier 2025',
+    points:       json['points'] ?? 1250,
+    badges:       (json['badges'] is List) ? (json['badges'] as List).length : (json['badges'] ?? 3),
+    interests:    List<String>.from(json['interests'] ?? ['Cuisine', 'Lecture']),
+    avatarUrl:    json['avatarUrl'] ?? json['avatar'],
+  );
 
   Map<String, dynamic> toJson() => {
-        'username': username,
-        'interests': interests,
-        'avatarUrl': avatarUrl,
-      };
+    'username':  username,
+    'interests': interests,
+    'avatarUrl': avatarUrl,
+  };
 }
 
 class Activity {
@@ -322,6 +295,7 @@ class Activity {
   final String category;
   final String description;
   final String imageUrl;
+  final bool isOfficial;       // ✅ AJOUTÉ
   final String? date;
   final String? timeSlot;
   final String? location;
@@ -329,6 +303,7 @@ class Activity {
   final int? maxParticipants;
   final bool isIndividual;
   final bool isDaily;
+  final Map<String, dynamic>? createdBy;  // ✅ AJOUTÉ
 
   Activity({
     required this.id,
@@ -336,6 +311,7 @@ class Activity {
     required this.category,
     required this.description,
     required this.imageUrl,
+    this.isOfficial = false,
     this.date,
     this.timeSlot,
     this.location,
@@ -343,24 +319,25 @@ class Activity {
     this.maxParticipants,
     this.isIndividual = false,
     this.isDaily = false,
+    this.createdBy,
   });
 
-  factory Activity.fromJson(Map<String, dynamic> json) {
-    return Activity(
-      id: json['_id'] ?? json['id'] ?? '',
-      title: json['title'] ?? '',
-      category: json['category'] ?? '',
-      description: json['description'] ?? '',
-      imageUrl: json['imageUrl'] ?? json['image'] ?? '',
-      date: json['date'],
-      timeSlot: json['timeSlot'] ?? json['time'],
-      location: json['location'],
-      currentParticipants: json['currentParticipants'],
-      maxParticipants: json['maxParticipants'],
-      isIndividual: json['isIndividual'] ?? json['type'] == 'individual',
-      isDaily: json['isDaily'] ?? false,
-    );
-  }
+  factory Activity.fromJson(Map<String, dynamic> json) => Activity(
+    id:                  json['_id'] ?? json['id'] ?? '',
+    title:               json['title'] ?? '',
+    category:            json['category'] ?? '',
+    description:         json['description'] ?? '',
+    imageUrl:            json['imageUrl'] ?? json['image'] ?? '',
+    isOfficial:          json['isOfficial'] ?? false,
+    date:                json['date'],
+    timeSlot:            json['timeSlot'] ?? json['time'],
+    location:            json['location'],
+    currentParticipants: json['currentParticipants'],
+    maxParticipants:     json['maxParticipants'],
+    isIndividual:        json['isIndividual'] ?? json['type'] == 'individual',
+    isDaily:             json['isDaily'] ?? false,
+    createdBy:           json['createdBy'] is Map ? Map<String, dynamic>.from(json['createdBy']) : null,
+  );
 
   String? get participantsLabel {
     if (currentParticipants == null || maxParticipants == null) return null;
