@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:wejoy/screens/service/admin_api_service.dart';
-import '../../widgets/stat_card.dart';
+import 'package:wejoy/widgets/stat_card.dart';
 
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});

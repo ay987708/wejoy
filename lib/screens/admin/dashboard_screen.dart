@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:wejoy/screens/service/admin_api_service.dart';
-import '../../widgets/stat_card.dart';
+import 'package:wejoy/screens/admin/stats_screen.dart';
+import 'package:wejoy/widgets/stat_card.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
