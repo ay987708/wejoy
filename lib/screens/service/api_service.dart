@@ -1,8 +1,19 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-const String baseUrl = 'http://localhost:5001';
+// ✅ Configuration automatique selon la plateforme
+String get baseUrl {
+  if (kIsWeb) {
+    return 'http://localhost:5000';     // Flutter Web ✅
+  } else if (Platform.isAndroid) {
+    return 'http://10.0.2.2:5000';     // Android réel (adb reverse) + émulateur ✅
+  } else {
+    return 'http://localhost:5000';     // iOS ✅
+  }
+}
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
@@ -212,7 +223,6 @@ class ApiService {
       ).timeout(const Duration(seconds: 10));
 
       final data = _handleResponse(response);
-      // Gérer les deux formats possibles (liste directe ou objet avec champ 'activities')
       final List list = data is List ? data : (data['activities'] is List ? data['activities'] : []);
       return list.map((e) => Activity.fromJson(e)).toList();
     } catch (e) {
@@ -220,7 +230,6 @@ class ApiService {
     }
   }
 
-  // ✅ CRUD complet pour les activités
   Future<Map<String, dynamic>> createActivity(Map<String, dynamic> data) async {
     try {
       final response = await http.post(
@@ -358,8 +367,8 @@ class ApiService {
         headers: await _headers(),
       ).timeout(const Duration(seconds: 10));
       return _handleResponse(response) ?? [];
-    } catch (e) { 
-      return []; 
+    } catch (e) {
+      return [];
     }
   }
 
@@ -382,6 +391,114 @@ class ApiService {
   }
 
   // ══════════════════════════════════════════════════════════════════════════
+  // FIL COMMUNAUTAIRE (NOUVEAU)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /// Récupère les dernières actions des utilisateurs (ex: "Marie a rejoint Yoga")
+  Future<List<Map<String, dynamic>>> getCommunityFeed() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/community/feed'),
+        headers: await _headers(),
+      ).timeout(const Duration(seconds: 10));
+
+      final data = _handleResponse(response);
+      // On s'attend à une liste d'objets avec { username, action, activityTitle, createdAt }
+      if (data is List) {
+        return data.map((e) {
+          return {
+            'name': e['username'] ?? 'Anonyme',
+            'action': e['action'] ?? 'a interagi avec',
+            'activity': e['activityTitle'] ?? 'une activité',
+            'time': _formatTimeAgo(e['createdAt']),
+          };
+        }).toList();
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // Helper pour formater une date ISO en "il y a X min"
+  String _formatTimeAgo(String? isoDate) {
+    if (isoDate == null) return 'récemment';
+    try {
+      final date = DateTime.parse(isoDate).toLocal();
+      final now = DateTime.now();
+      final difference = now.difference(date);
+
+      if (difference.inSeconds < 60) return 'à l\'instant';
+      if (difference.inMinutes < 60) return 'il y a ${difference.inMinutes} min';
+      if (difference.inHours < 24) return 'il y a ${difference.inHours} h';
+      if (difference.inDays < 7) return 'il y a ${difference.inDays} j';
+      return 'il y a ${(difference.inDays / 7).floor()} sem';
+    } catch (_) {
+      return 'récemment';
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // DÉFI DU JOUR (NOUVEAU)
+  // ══════════════════════════════════════════════════════════════════════════
+
+  /// Récupère le défi personnalisé du jour, éventuellement adapté à l'humeur
+  Future<Map<String, dynamic>> getDailyChallenge({String? moodName}) async {
+    try {
+      // On peut envoyer l'humeur en paramètre si le backend le supporte
+      final query = moodName != null ? '?mood=$moodName' : '';
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/challenges/daily$query'),
+        headers: await _headers(),
+      ).timeout(const Duration(seconds: 10));
+
+      return _handleResponse(response);
+    } catch (e) {
+      // En cas d'erreur, on retourne un défi par défaut (fallback)
+      return {
+        'id': 'default',
+        'title': 'Méditation express',
+        'description': '5 minutes de respiration consciente',
+        'icon': '🧘',
+        'color': '#D63FBF',
+        'points': 10,
+      };
+    }
+  }
+
+  /// Marque le défi comme commencé / relevé par l'utilisateur
+  Future<void> startChallenge(String challengeId) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/challenges/$challengeId/start'),
+        headers: await _headers(),
+      ).timeout(const Duration(seconds: 10));
+
+      _handleResponse(response);
+    } on ApiException {
+      rethrow;
+    } catch (e) {
+      throw ApiException(
+        statusCode: 0,
+        message: 'Impossible de démarrer le défi',
+      );
+    }
+  }
+
+  /// Optionnel : Récupère l'historique des défis de l'utilisateur
+  Future<List<dynamic>> getUserChallenges() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/api/users/me/challenges'),
+        headers: await _headers(),
+      ).timeout(const Duration(seconds: 10));
+      return _handleResponse(response) ?? [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
   // HEALTH CHECK
   // ══════════════════════════════════════════════════════════════════════════
 
@@ -391,8 +508,8 @@ class ApiService {
         Uri.parse('$baseUrl/'),
       ).timeout(const Duration(seconds: 3));
       return response.statusCode == 200;
-    } catch (_) { 
-      return false; 
+    } catch (_) {
+      return false;
     }
   }
 }
@@ -432,18 +549,17 @@ class UserProfile {
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
-    // Gestion flexible des différents formats possibles
     return UserProfile(
-      id:          json['_id']        ?? json['id']        ?? '',
-      username:    json['username']   ?? json['name']      ?? 'Utilisateur',
-      email:       json['email']      ?? '',
-      memberSince: json['memberSince']?? json['createdAt'] ?? 'mars 2026',
-      points:      json['points']     ?? 0,
-      badges:      (json['badges'] is List) 
-                    ? (json['badges'] as List).length 
+      id:          json['_id']         ?? json['id']         ?? '',
+      username:    json['username']    ?? json['name']       ?? 'Utilisateur',
+      email:       json['email']       ?? '',
+      memberSince: json['memberSince'] ?? json['createdAt']  ?? 'mars 2026',
+      points:      json['points']      ?? 0,
+      badges:      (json['badges'] is List)
+                    ? (json['badges'] as List).length
                     : (json['badges'] ?? json['badgeCount'] ?? 0),
       interests:   List<String>.from(json['interests'] ?? []),
-      avatarUrl:   json['avatarUrl']  ?? json['avatar'],
+      avatarUrl:   json['avatarUrl']   ?? json['avatar'],
     );
   }
 
@@ -489,21 +605,21 @@ class Activity {
 
   factory Activity.fromJson(Map<String, dynamic> json) {
     return Activity(
-      id:                  json['_id']                ?? json['id']   ?? '',
-      title:               json['title']              ?? '',
-      category:            json['category']           ?? '',
-      description:         json['description']        ?? '',
-      imageUrl:            json['imageUrl']            ?? json['image']?? '',
-      isOfficial:          json['isOfficial']         ?? false,
+      id:                  json['_id']                 ?? json['id']    ?? '',
+      title:               json['title']               ?? '',
+      category:            json['category']            ?? '',
+      description:         json['description']         ?? '',
+      imageUrl:            json['imageUrl']             ?? json['image'] ?? '',
+      isOfficial:          json['isOfficial']          ?? false,
       date:                json['date'],
-      timeSlot:            json['timeSlot']            ?? json['time'],
+      timeSlot:            json['timeSlot']             ?? json['time'],
       location:            json['location'],
-      currentParticipants: json['currentParticipants']?? 0,
+      currentParticipants: json['currentParticipants'] ?? 0,
       maxParticipants:     json['maxParticipants'],
-      isIndividual:        json['isIndividual']        ?? json['type'] == 'individual',
-      isDaily:             json['isDaily']             ?? false,
-      createdBy:           json['createdBy'] is Map 
-                            ? Map<String, dynamic>.from(json['createdBy']) 
+      isIndividual:        json['isIndividual']         ?? json['type'] == 'individual',
+      isDaily:             json['isDaily']              ?? false,
+      createdBy:           json['createdBy'] is Map
+                            ? Map<String, dynamic>.from(json['createdBy'])
                             : null,
     );
   }

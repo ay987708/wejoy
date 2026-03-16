@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
-const String _baseUrl = 'http://localhost:5001';
+const String _baseUrl = 'http://localhost:5000';
 const Color _primary  = Color(0xFFD63FBF);
 const Color _dark     = Color(0xFF9C27B0);
 const Color _bg       = Color(0xFFF5F5F5);

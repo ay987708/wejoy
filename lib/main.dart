@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:wejoy/screens/home_page.dart';
 import 'package:wejoy/screens/service/admin_api_service.dart';
 import 'package:wejoy/screens/splash_screen.dart';
 import 'package:wejoy/screens/login_page.dart';
-import 'package:wejoy/screens/home_page_connected.dart';
+import 'package:wejoy/screens/home_page.dart'; // ou home_page.dart selon votre nom de fichier
+import 'package:wejoy/screens/activity_detail_page.dart'; // à créer
 import 'package:wejoy/screens/admin/admin_shell.dart';
 
 void main() {
@@ -29,13 +31,13 @@ class MyApp extends StatelessWidget {
         fontFamily: 'Roboto',
         useMaterial3: true,
       ),
-      // ✅ Routes nommées pour que Navigator.pushReplacementNamed fonctionne
       initialRoute: '/',
       routes: {
-        '/':       (_) => const SplashScreen(),
-        '/login':  (_) => const LoginPage(),
-        '/home':   (_) => const HomePage(),
-        '/admin':  (_) => const AdminShell(),
+        '/':                (_) => const SplashScreen(),
+        '/login':           (_) => const LoginPage(),
+        '/home':            (_) => const HomePage(),
+        '/activity-detail': (_) => const ActivityDetailPage(), // nouvelle route
+        '/admin':           (_) => const AdminShell(),
       },
     );
   }
