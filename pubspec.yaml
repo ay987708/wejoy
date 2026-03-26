@@ -25,11 +25,7 @@ dependencies:
   # ── Ajoutés pour l'amélioration de la HomePage ──
   cached_network_image: ^3.3.0
   shimmer: ^3.0.0
-
-
-
   socket_io_client: ^3.1.4
-
 
 dev_dependencies:
   flutter_test:
