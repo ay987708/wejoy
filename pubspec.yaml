@@ -27,6 +27,7 @@ dependencies:
   shimmer: ^3.0.0
 
 
+
   socket_io_client: ^3.1.4
 
 
