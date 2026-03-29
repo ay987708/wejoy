@@ -1,154 +1,237 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:wejoy/screens/service/api_service.dart'; // adaptez le chemin si besoin
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import 'package:wejoy/screens/service/api_service.dart';
 
-class ActivityDetailPage extends StatelessWidget {
+// ── Ce fichier gère la navigation depuis home_page via arguments ───────────
+// Navigation : Navigator.pushNamed(context, ActivityDetailPage.routeName, arguments: activity)
+// OU          Navigator.push(..., ActivityDetailPage.fromId(id: activity.id))
+
+class ActivityDetailPage extends StatefulWidget {
   static const routeName = '/activity-detail';
 
-  const ActivityDetailPage({super.key});
+  final Activity? activity;   // si passé directement
+  final String?   activityId; // si passé via ID seulement
+
+  const ActivityDetailPage({super.key, this.activity, this.activityId});
+
+  // Construire depuis un ID
+  static Widget fromId({required String id}) => ActivityDetailPage(activityId: id);
+
+  @override
+  State<ActivityDetailPage> createState() => _ActivityDetailPageState();
+}
+
+class _ActivityDetailPageState extends State<ActivityDetailPage> {
+  static const String _baseUrl = 'http://localhost:5001';
+
+  Activity? _activity;
+  bool _loading = true;
+  bool _isMember = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Si activité déjà disponible, l'utiliser directement
+    if (widget.activity != null) {
+      _activity = widget.activity;
+      _loading = false;
+    } else {
+      _fetchDetail();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Récupérer via arguments de navigation si disponible
+    if (_activity == null && widget.activityId == null) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Activity) {
+        setState(() { _activity = args; _loading = false; });
+      } else if (args is String) {
+        _fetchDetailById(args);
+      }
+    }
+  }
+
+  Future<String?> _tok() async {
+    final p = await SharedPreferences.getInstance();
+    return p.getString('auth_token');
+  }
+
+  Future<void> _fetchDetail() async {
+    final id = widget.activityId;
+    if (id == null || id.isEmpty) { setState(() => _loading = false); return; }
+    await _fetchDetailById(id);
+  }
+
+  Future<void> _fetchDetailById(String id) async {
+    setState(() => _loading = true);
+    try {
+      final res = await http.get(
+        Uri.parse('$_baseUrl/api/activities/$id'),
+        headers: {'Authorization': 'Bearer ${await _tok()}'},
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        setState(() {
+          _activity = Activity.fromJson(data);
+          _isMember = data['isMember'] == true;
+        });
+      }
+    } catch (e) { debugPrint('Error: $e'); }
+    finally { if (mounted) setState(() => _loading = false); }
+  }
+
+  Future<void> _toggleJoin() async {
+    if (_activity == null) return;
+    final api = ApiService();
+    try {
+      if (_isMember) {
+        await api.leaveActivity(_activity!.id);
+      } else {
+        await api.joinActivity(_activity!.id);
+      }
+      setState(() => _isMember = !_isMember);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(_isMember ? 'Vous avez rejoint l\'activité ! +50 points 🎉' : 'Vous avez quitté l\'activité'),
+          backgroundColor: _isMember ? const Color(0xFF10B981) : Colors.grey,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ));
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Erreur: $e'), backgroundColor: Colors.red));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Récupérer l'activité passée en argument
-    final activity = ModalRoute.of(context)!.settings.arguments as Activity;
+    if (_loading) return const Scaffold(
+      backgroundColor: Color(0xFFF8FAFC),
+      body: Center(child: CircularProgressIndicator(color: Color(0xFFD63FBF))));
+
+    if (_activity == null) return Scaffold(
+      appBar: AppBar(backgroundColor: const Color(0xFFD63FBF), foregroundColor: Colors.white,
+        leading: IconButton(icon: const Icon(Icons.arrow_back_ios_new), onPressed: () => Navigator.pop(context))),
+      body: const Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Icon(Icons.error_outline_rounded, size: 60, color: Colors.grey),
+        SizedBox(height: 16),
+        Text('Activité introuvable', style: TextStyle(fontSize: 16, color: Colors.grey)),
+      ])));
+
+    final activity = _activity!;
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text(activity.title),
+        title: Text(activity.title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
         backgroundColor: const Color(0xFFD63FBF),
         foregroundColor: Colors.white,
         elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Hero doit être placé ici avec le même tag que dans la carte
-            Hero(
-              tag: 'activity-${activity.id}',
-              child: CachedNetworkImage(
-                imageUrl: activity.imageUrl,
-                height: 250,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                placeholder: (_, __) => Container(
-                  height: 250,
-                  color: Colors.grey[200],
-                  child: const Center(child: CircularProgressIndicator(color: Color(0xFFD63FBF))),
-                ),
-                errorWidget: (_, __, ___) => Container(
-                  height: 250,
-                  color: const Color(0xFFD63FBF).withOpacity(0.1),
-                  child: const Icon(Icons.broken_image, size: 50, color: Color(0xFFD63FBF)),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Titre et catégorie
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          activity.title,
-                          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFD63FBF).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          activity.category,
-                          style: const TextStyle(fontSize: 12, color: Color(0xFFD63FBF), fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  // Description
-                  Text(
-                    activity.description,
-                    style: const TextStyle(fontSize: 16, height: 1.5),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Informations supplémentaires
-                  _buildInfoRow(Icons.calendar_today_rounded, activity.date ?? 'Date non définie'),
-                  if (activity.timeSlot != null)
-                    _buildInfoRow(Icons.access_time_rounded, activity.timeSlot!),
-                  if (activity.location != null)
-                    _buildInfoRow(Icons.location_on_rounded, activity.location!),
-                  _buildInfoRow(
-                    Icons.people_outline_rounded,
-                    activity.participantsLabel,
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Type d'activité (individuel/collectif)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: activity.isIndividual ? Colors.blue[50] : Colors.green[50],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          activity.isIndividual ? Icons.person_rounded : Icons.group_rounded,
-                          color: activity.isIndividual ? Colors.blue : Colors.green,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          activity.isIndividual ? 'Activité individuelle' : 'Activité collective',
-                          style: TextStyle(
-                            color: activity.isIndividual ? Colors.blue : Colors.green,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          // Appeler la méthode pour rejoindre l'activité
-          // Ici vous pouvez utiliser le même service que dans HomePage
-          // Pour simplifier, on peut retourner un résultat ou utiliser un provider
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Fonctionnalité à implémenter')),
-          );
-        },
-        label: Text(activity.isIndividual ? 'Commencer' : 'Rejoindre'),
-        icon: const Icon(Icons.add),
-        backgroundColor: const Color(0xFFD63FBF),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(IconData icon, String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: Colors.grey[600]),
-          const SizedBox(width: 8),
-          Expanded(child: Text(text, style: const TextStyle(fontSize: 14))),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+          onPressed: () => Navigator.pop(context)),
+        actions: [
+          Padding(padding: const EdgeInsets.only(right: 12, top: 8, bottom: 8),
+            child: GestureDetector(
+              onTap: _toggleJoin,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: _isMember ? Colors.white.withOpacity(0.2) : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.white.withOpacity(0.5))),
+                child: Text(
+                  _isMember ? 'Quitter' : 'Rejoindre',
+                  style: TextStyle(
+                    color: _isMember ? Colors.white : const Color(0xFFD63FBF),
+                    fontWeight: FontWeight.w700, fontSize: 13))))),
         ],
       ),
+      body: SingleChildScrollView(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // Image
+          activity.imageUrl.isNotEmpty
+            ? CachedNetworkImage(
+                imageUrl: activity.imageUrl, height: 220, width: double.infinity, fit: BoxFit.cover,
+                errorWidget: (_, __, ___) => _imgPlaceholder(activity.category))
+            : _imgPlaceholder(activity.category),
+
+          Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            // Badge catégorie + titre
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(color: const Color(0xFFD63FBF).withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+              child: Text(activity.category, style: const TextStyle(fontSize: 11, color: Color(0xFFD63FBF), fontWeight: FontWeight.w700))),
+            const SizedBox(height: 10),
+            Text(activity.title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: Color(0xFF0F0F1A))),
+            const SizedBox(height: 8),
+            Text(activity.description, style: const TextStyle(fontSize: 14, height: 1.6, color: Color(0xFF64748B))),
+            const SizedBox(height: 20),
+
+            // Infos
+            _infoRow(Icons.calendar_today_rounded, activity.date ?? 'Date non définie'),
+            if (activity.timeSlot != null) _infoRow(Icons.access_time_rounded, activity.timeSlot!),
+            if (activity.location != null) _infoRow(Icons.location_on_rounded, activity.location!),
+            _infoRow(Icons.people_outline_rounded, activity.participantsLabel ?? '${activity.currentParticipants} participants'),
+            const SizedBox(height: 20),
+
+            // Type
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: activity.isIndividual ? Colors.blue.withOpacity(0.08) : Colors.green.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(12)),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(activity.isIndividual ? Icons.person_rounded : Icons.group_rounded,
+                  color: activity.isIndividual ? Colors.blue : Colors.green, size: 20),
+                const SizedBox(width: 8),
+                Text(activity.isIndividual ? 'Activité individuelle' : 'Activité collective',
+                  style: TextStyle(color: activity.isIndividual ? Colors.blue : Colors.green, fontWeight: FontWeight.w600)),
+              ])),
+            const SizedBox(height: 24),
+
+            // Bouton rejoindre
+            SizedBox(width: double.infinity, child: ElevatedButton.icon(
+              onPressed: _toggleJoin,
+              icon: Icon(_isMember ? Icons.exit_to_app_rounded : Icons.add_rounded),
+              label: Text(_isMember ? 'Quitter l\'activité' : 'Rejoindre l\'activité',
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _isMember ? Colors.grey[200] : const Color(0xFFD63FBF),
+                foregroundColor: _isMember ? Colors.grey[700] : Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))))),
+          ])),
+        ]),
+      ),
     );
   }
+
+  Widget _imgPlaceholder(String category) {
+    const emojis = {'Cuisine':'🍳','Lecture':'📚','Jardinage':'🌱','Yoga':'🧘','Sport':'⚽','Autre':'✨'};
+    return Container(height: 220, width: double.infinity,
+      color: const Color(0xFFD63FBF).withOpacity(0.07),
+      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Text(emojis[category] ?? '✨', style: const TextStyle(fontSize: 60)),
+        const SizedBox(height: 8),
+        Text(category, style: const TextStyle(fontSize: 16, color: Color(0xFFD63FBF), fontWeight: FontWeight.w600)),
+      ]));
+  }
+
+  Widget _infoRow(IconData icon, String text) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Row(children: [
+      Icon(icon, size: 16, color: Colors.grey[500]),
+      const SizedBox(width: 10),
+      Expanded(child: Text(text, style: TextStyle(fontSize: 13, color: Colors.grey[700]))),
+    ]));
 }

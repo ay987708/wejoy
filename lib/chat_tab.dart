@@ -1,11 +1,13 @@
 import 'dart:async';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
-const String _baseUrl = 'http://192.168.143.11:5001';
+const String _baseUrl = 'http://localhost:5001';
 const Color _rose   = Color(0xFFD63FBF);
 const Color _violet = Color(0xFF7C3AED);
 const Color _ink    = Color(0xFF0F0F1A);
@@ -155,7 +157,17 @@ class _ChatTabState extends State<ChatTab> {
     final token = await _tok();
     final request = http.MultipartRequest('POST', Uri.parse('$_baseUrl/api/upload'));
     request.headers['Authorization'] = 'Bearer $token';
-    request.files.add(await http.MultipartFile.fromPath('image', picked.path));
+
+    if (kIsWeb) {
+      // ✅ Web — lire les bytes directement
+      final bytes = await picked.readAsBytes();
+      final filename = picked.name.isNotEmpty ? picked.name : 'photo.jpg';
+      request.files.add(http.MultipartFile.fromBytes('image', bytes, filename: filename));
+    } else {
+      // ✅ Mobile — utiliser le chemin
+      request.files.add(await http.MultipartFile.fromPath('image', picked.path));
+    }
+
     final response = await request.send();
     if (response.statusCode == 200) {
       final body = await response.stream.bytesToString();
@@ -379,7 +391,8 @@ class _ChatTabState extends State<ChatTab> {
     } catch (_) {}
 
     return GestureDetector(
-      onLongPress: deleted ? null : () => _showOptions(m),
+      onLongPress:    deleted ? null : () => _showOptions(m),  // mobile
+      onSecondaryTap: deleted ? null : () => _showOptions(m),  // PC clic droit
       child: Padding(
         padding: const EdgeInsets.only(bottom: 12),
         child: Row(

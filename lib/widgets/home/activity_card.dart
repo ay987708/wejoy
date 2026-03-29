@@ -114,7 +114,7 @@ class ActivityCard extends StatelessWidget {
                       children: [
                         Icon(Icons.people_outline_rounded, size: 10, color: Colors.grey[400]),
                         const SizedBox(width: 4),
-                        Text(activity.participantsLabel, style: TextStyle(fontSize: 9, color: Colors.grey[500])),
+                        Text(activity.participantsLabel ?? '', style: TextStyle(fontSize: 9, color: Colors.grey[500])),
                       ],
                     ),
                     const SizedBox(height: 8),

@@ -7,7 +7,7 @@ import 'package:wejoy/screens/admin/admin_shell.dart';
 import 'dart:convert';
 import 'package:wejoy/screens/home_page.dart';
 
-const String _baseUrl = 'http://localhost:5000';
+const String _baseUrl = 'http://localhost:5001';
 
 // =============================================
 // MODERN TOAST NOTIFICATION SYSTEM

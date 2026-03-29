@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-// ignore: depend_on_referenced_packages
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:wejoy/screens/service/api_service.dart';
 
@@ -90,7 +89,7 @@ class ActivityListItem extends StatelessWidget {
                       ],
                       Icon(Icons.people_outline_rounded, size: 10, color: Colors.grey[400]),
                       const SizedBox(width: 2),
-                      Text(activity.participantsLabel, style: TextStyle(fontSize: 9, color: Colors.grey[500])),
+                      Text(activity.participantsLabel ?? '', style: TextStyle(fontSize: 9, color: Colors.grey[500])),
                     ],
                   ),
                 ],

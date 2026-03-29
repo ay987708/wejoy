@@ -3,9 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:wejoy/screens/service/api_service.dart';
 
-// ══════════════════════════════════════════════════════════════════════════════
-// MODÈLE MESSAGE
-// ══════════════════════════════════════════════════════════════════════════════
+
 class ChatMessage {
   final String text;
   final bool isUser;
@@ -15,9 +13,7 @@ class ChatMessage {
       : time = time ?? DateTime.now();
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// PAGE CHAT
-// ══════════════════════════════════════════════════════════════════════════════
+
 class ChatPage extends StatefulWidget {
   final UserProfile? user;
   const ChatPage({super.key, this.user});

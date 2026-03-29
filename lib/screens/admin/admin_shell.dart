@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:wejoy/screens/admin/admin_activities_screens.dart';
-import 'package:wejoy/screens/admin/dashboard_screen.dart';
 import 'package:wejoy/screens/service/admin_api_service.dart';
-import 'package:wejoy/screens/admin/users_screen.dart';
-import 'package:wejoy/screens/admin/services_screen.dart';
-import 'package:wejoy/screens/admin/demandes_screen.dart';
-import 'package:wejoy/screens/admin/notifications_screen.dart';
-import 'package:wejoy/screens/admin/stats_screen.dart';
+import 'dashboard_screen.dart';
+import 'users_screen.dart';
+import 'services_screen.dart';
+import 'demandes_screen.dart';
+import 'notifications_screen.dart';
+import 'stats_screen.dart';
+
 
 class AdminShell extends StatefulWidget {
   const AdminShell({super.key});
