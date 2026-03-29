@@ -6,13 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 // ✅ Configuration automatique selon la plateforme
 String get baseUrl {
-  if (kIsWeb) {
-    return 'http://localhost:5000';     // Flutter Web ✅
-  } else if (Platform.isAndroid) {
-    return 'http://10.0.2.2:5000';     // Android réel (adb reverse) + émulateur ✅
-  } else {
-    return 'http://localhost:5000';     // iOS ✅
-  }
+  return 'http://192.168.1.11:5000';
 }
 
 class ApiService {

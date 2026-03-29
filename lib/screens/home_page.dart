@@ -9,10 +9,8 @@ import 'package:wejoy/widgets/home/daily_challenge_card.dart';
 import 'package:wejoy/widgets/home/recommended_section.dart';
 import 'package:wejoy/widgets/home/community_feed_section.dart';
 import 'package:wejoy/widgets/home/activities_section.dart';
-
-// ──────────────────────────────────────────────────────────────────────────────
-// L'enum Mood est défini dans mood_selector.dart
-// ──────────────────────────────────────────────────────────────────────────────
+import 'package:wejoy/screens/defis_page.dart';
+import 'package:wejoy/screens/chat_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -58,14 +56,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
-    _fadeAnimation = CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeOut,
-    );
+    _fadeController = AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
+    _fadeAnimation = CurvedAnimation(parent: _fadeController, curve: Curves.easeOut);
     _fadeController.forward();
     _loadData();
   }
@@ -80,12 +72,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   Future<void> _loadData() async {
     try {
       await Future.wait([
-        _loadUser(),
-        _loadRecommended(),
-        _loadAllActivities(),
-        _loadNotifications(),
-        _loadCommunityFeed(),
-        _loadDailyChallenge(),
+        _loadUser(), _loadRecommended(), _loadAllActivities(),
+        _loadNotifications(), _loadCommunityFeed(), _loadDailyChallenge(),
       ]);
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
@@ -113,9 +101,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       setState(() => _loadingRecommended = true);
       final recommended = await _api.getRecommendedActivities();
       if (mounted) setState(() => _recommended = recommended);
-    } catch (e) {
-      // silence
-    } finally {
+    } catch (e) {} finally {
       if (mounted) setState(() => _loadingRecommended = false);
     }
   }
@@ -125,9 +111,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       setState(() => _loadingAll = true);
       final all = await _api.getAllActivities();
       if (mounted) setState(() => _allActivities = all);
-    } catch (e) {
-      // silence
-    } finally {
+    } catch (e) {} finally {
       if (mounted) setState(() => _loadingAll = false);
     }
   }
@@ -144,9 +128,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     try {
       final feed = await _api.getCommunityFeed();
       if (mounted) setState(() => _communityFeed = feed);
-    } catch (e) {
-      // silencieux
-    } finally {
+    } catch (e) {} finally {
       if (mounted) setState(() => _loadingFeed = false);
     }
   }
@@ -156,9 +138,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     try {
       final challenge = await _api.getDailyChallenge(moodName: _selectedMood?.name);
       if (mounted) setState(() => _dailyChallenge = challenge);
-    } catch (e) {
-      // silencieux
-    } finally {
+    } catch (e) {} finally {
       if (mounted) setState(() => _loadingChallenge = false);
     }
   }
@@ -178,12 +158,31 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   Future<void> _onMoodSelected(Mood mood) async {
     setState(() => _selectedMood = mood);
+
+    const messages = {
+      Mood.excellent: ('🌟 Super ! Profitez de cette énergie positive !', Color(0xFF22C55E)),
+      Mood.bien: ('😊 Tant mieux ! Continuez sur cette lancée !', Color(0xFF3B82F6)),
+      Mood.neutre: ('😐 C\'est ok. Une activité pourrait vous booster !', Color(0xFFF59E0B)),
+      Mood.triste: ('😟 Courage ! Essayez une activité douce pour vous sentir mieux.', Color(0xFFEF4444)),
+      Mood.besoinSoutien: ('🤍 Vous n\'êtes pas seul(e). Joya est là pour vous écouter !', Color(0xFFD63FBF)),
+    };
+
+    final msg = messages[mood];
+    if (msg != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg.$1, style: const TextStyle(fontWeight: FontWeight.w500)),
+          backgroundColor: msg.$2,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+
     try {
       await _api.saveMood(mood.name);
-      await Future.wait([
-        _loadRecommended(),
-        _loadDailyChallenge(),
-      ]);
+      await Future.wait([_loadRecommended(), _loadDailyChallenge()]);
     } catch (e) {
       if (mounted) _showErrorSnackBar("Erreur lors de l'enregistrement de l'humeur");
     }
@@ -200,10 +199,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               const Icon(Icons.check_circle_rounded, color: Colors.white),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  'Vous avez rejoint "${activity.title}" ! +10 points 🎉',
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
+                child: Text('Vous avez rejoint "${activity.title}" ! +10 points 🎉',
+                    style: const TextStyle(fontWeight: FontWeight.w500)),
               ),
             ],
           ),
@@ -250,11 +247,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  // ======================== BUILD ========================
   @override
   Widget build(BuildContext context) {
     if (_error != null && _user == null && !_loadingUser) return _buildErrorScreen();
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
@@ -287,45 +282,25 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               children: [
                 WelcomeCard(user: _user, loading: _loadingUser),
                 const SizedBox(height: 24),
-                ProfileSection(user: _user, loading: _loadingUser),
+                ProfileSection(user: _user, loading: _loadingUser, onProfileUpdated: _loadUser),
                 const SizedBox(height: 24),
-                MoodSelector(
-                  selectedMood: _selectedMood,
-                  onMoodSelected: _onMoodSelected,
-                ),
+                MoodSelector(selectedMood: _selectedMood, onMoodSelected: _onMoodSelected),
                 const SizedBox(height: 24),
-                DailyChallengeCard(
-                  challenge: _dailyChallenge,
-                  loading: _loadingChallenge,
-                  onJoin: _startDailyChallenge,
-                ),
+                DailyChallengeCard(challenge: _dailyChallenge, loading: _loadingChallenge, onJoin: _startDailyChallenge),
                 const SizedBox(height: 24),
                 RecommendedSection(
-                  activities: _recommended,
-                  loading: _loadingRecommended,
-                  onJoin: _joinActivity,
-                  onSeeAll: () => setState(() => _selectedNav = 1),
+                  activities: _recommended, loading: _loadingRecommended,
+                  onJoin: _joinActivity, onSeeAll: () => setState(() => _selectedNav = 1),
                 ),
                 const SizedBox(height: 24),
-                CommunityFeedSection(
-                  feed: _communityFeed,
-                  loading: _loadingFeed,
-                ),
+                CommunityFeedSection(feed: _communityFeed, loading: _loadingFeed),
                 const SizedBox(height: 24),
                 ActivitiesSection(
-                  activities: _allActivities,
-                  loading: _loadingAll,
-                  categories: _categories,
-                  selectedCategory: _selectedCategory,
+                  activities: _allActivities, loading: _loadingAll,
+                  categories: _categories, selectedCategory: _selectedCategory,
                   searchController: _searchController,
-                  onSearchChanged: (query) {
-                    _searchQuery = query;
-                    _filterActivities();
-                  },
-                  onCategorySelected: (cat) {
-                    setState(() => _selectedCategory = cat);
-                    _filterActivities();
-                  },
+                  onSearchChanged: (query) { _searchQuery = query; _filterActivities(); },
+                  onCategorySelected: (cat) { setState(() => _selectedCategory = cat); _filterActivities(); },
                   onJoin: _joinActivity,
                 ),
                 const SizedBox(height: 20),
@@ -336,16 +311,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       case 1:
         return const ActivitiePage();
       case 2:
-        return _buildPlaceholder('Défis — Bientôt disponible', Icons.emoji_events_rounded);
+        return const DefisPage();
       case 3:
-        return _buildPlaceholder('Communauté — Bientôt disponible', Icons.people_rounded);
+        return ChatPage(user: _user);
       case 4:
         return RefreshIndicator(
           onRefresh: _loadUser,
           color: const Color(0xFFD63FBF),
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
-            child: ProfileSection(user: _user, loading: _loadingUser, detailed: true),
+            child: ProfileSection(
+              user: _user, loading: _loadingUser,
+              detailed: true, onProfileUpdated: _loadUser,
+            ),
           ),
         );
       default:
@@ -353,70 +331,36 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
   }
 
-  Widget _buildPlaceholder(String text, IconData icon) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 60, color: Colors.grey[400]),
-          const SizedBox(height: 12),
-          Text(text, style: const TextStyle(color: Colors.grey, fontSize: 16)),
-        ],
-      ),
-    );
-  }
-
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 2))
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 2))],
       ),
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 40, height: 40,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFD63FBF), Color(0xFF9C27B0)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              gradient: const LinearGradient(colors: [Color(0xFFD63FBF), Color(0xFF9C27B0)], begin: Alignment.topLeft, end: Alignment.bottomRight),
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Center(child: Text('WJ', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16))),
           ),
           const SizedBox(width: 12),
-          const Text(
-            'WeJoy',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFFD63FBF), letterSpacing: -0.5),
-          ),
+          const Text('WeJoy', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFFD63FBF), letterSpacing: -0.5)),
           const Spacer(),
           Stack(
             children: [
-              IconButton(
-                icon: const Icon(Icons.notifications_outlined),
-                color: Colors.grey[700],
-                onPressed: () {},
-              ),
+              IconButton(icon: const Icon(Icons.notifications_outlined), color: Colors.grey[700], onPressed: () {}),
               if (_notificationCount > 0)
                 Positioned(
-                  top: 8,
-                  right: 8,
+                  top: 8, right: 8,
                   child: Container(
-                    width: 18,
-                    height: 18,
+                    width: 18, height: 18,
                     decoration: const BoxDecoration(color: Color(0xFFD63FBF), shape: BoxShape.circle),
-                    child: Center(
-                      child: Text(
-                        '$_notificationCount',
-                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                      ),
-                    ),
+                    child: Center(child: Text('$_notificationCount', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold))),
                   ),
                 ),
             ],
@@ -444,37 +388,20 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           final isSelected = _selectedNav == i;
           return Expanded(
             child: GestureDetector(
-              onTap: () {
-                setState(() => _selectedNav = i);
-              },
+              onTap: () => setState(() => _selectedNav = i),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(
-                      color: isSelected ? const Color(0xFFD63FBF) : Colors.transparent,
-                      width: 2.5,
-                    ),
-                  ),
+                  border: Border(bottom: BorderSide(color: isSelected ? const Color(0xFFD63FBF) : Colors.transparent, width: 2.5)),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      _navItems[i]['icon'] as IconData,
-                      size: 22,
-                      color: isSelected ? const Color(0xFFD63FBF) : Colors.grey[500],
-                    ),
+                    Icon(_navItems[i]['icon'] as IconData, size: 22, color: isSelected ? const Color(0xFFD63FBF) : Colors.grey[500]),
                     const SizedBox(height: 4),
-                    Text(
-                      _navItems[i]['label'] as String,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                        color: isSelected ? const Color(0xFFD63FBF) : Colors.grey[600],
-                      ),
-                    ),
+                    Text(_navItems[i]['label'] as String,
+                        style: TextStyle(fontSize: 11, fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400, color: isSelected ? const Color(0xFFD63FBF) : Colors.grey[600])),
                   ],
                 ),
               ),
@@ -502,23 +429,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               const SizedBox(height: 24),
               const Text('Oups ! Une erreur est survenue', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
-              Text(
-                _error ?? 'Impossible de charger les données',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey[600], fontSize: 14),
-              ),
+              Text(_error ?? 'Impossible de charger les données', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: () {
-                  setState(() => _error = null);
-                  _loadData();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFD63FBF),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
+                onPressed: () { setState(() => _error = null); _loadData(); },
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD63FBF), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                 child: const Text('Réessayer'),
               ),
             ],

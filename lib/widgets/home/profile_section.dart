@@ -2,12 +2,53 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:wejoy/screens/service/api_service.dart';
+import 'package:wejoy/screens/edit_profile_page.dart';
 
 class ProfileSection extends StatelessWidget {
   final UserProfile? user;
   final bool loading;
   final bool detailed;
-  const ProfileSection({super.key, this.user, required this.loading, this.detailed = false});
+  final Future<void> Function() onProfileUpdated;
+
+  const ProfileSection({
+    super.key,
+    this.user,
+    required this.loading,
+    this.detailed = false,
+    required this.onProfileUpdated,
+  });
+
+  bool _isNetworkImage(String? value) {
+    if (value == null || value.isEmpty) return false;
+    return value.startsWith('http://') || value.startsWith('https://');
+  }
+
+  Widget _buildAvatarWidget() {
+    final avatar = user?.avatarUrl;
+
+    if (_isNetworkImage(avatar)) {
+      return ClipOval(
+        child: CachedNetworkImage(
+          imageUrl: avatar!,
+          fit: BoxFit.cover,
+          width: 66,
+          height: 66,
+          placeholder: (_, __) => const CircularProgressIndicator(
+            color: Colors.white,
+            strokeWidth: 2,
+          ),
+          errorWidget: (_, __, ___) =>
+              const Text('👤', style: TextStyle(fontSize: 30)),
+        ),
+      );
+    }
+
+    if (avatar != null && avatar.isNotEmpty) {
+      return Text(avatar, style: const TextStyle(fontSize: 30));
+    }
+
+    return const Text('👤', style: TextStyle(fontSize: 30));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,14 +84,31 @@ class ProfileSection extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(Icons.person_outline_rounded, size: 18, color: Colors.grey[600]),
+                  Icon(
+                    Icons.person_outline_rounded,
+                    size: 18,
+                    color: Colors.grey[600],
+                  ),
                   const SizedBox(width: 8),
-                  const Text('Mon Profil', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  const Text(
+                    'Mon Profil',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
                 ],
               ),
               if (detailed)
                 TextButton(
-                  onPressed: () {},
+                  onPressed: () async {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => EditProfilePage(
+                          user: user!,
+                          onProfileUpdated: onProfileUpdated,
+                        ),
+                      ),
+                    );
+                  },
                   style: TextButton.styleFrom(
                     foregroundColor: const Color(0xFFD63FBF),
                     minimumSize: Size.zero,
@@ -70,7 +128,9 @@ class ProfileSection extends StatelessWidget {
                   height: 70,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: const LinearGradient(colors: [Color(0xFFD63FBF), Color(0xFF9C27B0)]),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFD63FBF), Color(0xFF9C27B0)],
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: const Color(0xFFD63FBF).withOpacity(0.3),
@@ -80,18 +140,7 @@ class ProfileSection extends StatelessWidget {
                     ],
                   ),
                   child: Center(
-                    child: user!.avatarUrl != null && user!.avatarUrl!.isNotEmpty
-                        ? ClipOval(
-                            child: CachedNetworkImage(
-                              imageUrl: user!.avatarUrl!,
-                              fit: BoxFit.cover,
-                              width: 66,
-                              height: 66,
-                              placeholder: (_, __) => const CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                              errorWidget: (_, __, ___) => const Text('👤', style: TextStyle(fontSize: 30)),
-                            ),
-                          )
-                        : const Text('👤', style: TextStyle(fontSize: 30)),
+                    child: _buildAvatarWidget(),
                   ),
                 ),
               ),
@@ -100,7 +149,13 @@ class ProfileSection extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(user!.username, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                    Text(
+                      user!.username,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       'Membre depuis ${user!.memberSince}',
@@ -114,11 +169,19 @@ class ProfileSection extends StatelessWidget {
           const SizedBox(height: 16),
           Row(
             children: [
-              Icon(Icons.star_outline_rounded, size: 14, color: const Color(0xFFD63FBF)),
+              Icon(
+                Icons.star_outline_rounded,
+                size: 14,
+                color: const Color(0xFFD63FBF),
+              ),
               const SizedBox(width: 4),
               Text(
                 "Centres d'intérêt",
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey[700]),
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[700],
+                ),
               ),
             ],
           ),
@@ -138,10 +201,13 @@ class ProfileSection extends StatelessWidget {
                       'Jardinage': '🌱',
                       'Yoga': '🧘',
                       'Sport': '⚽',
-                      'Autre': '✨'
+                      'Autre': '✨',
                     };
                     return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFD63FBF).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(20),
@@ -149,11 +215,18 @@ class ProfileSection extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(icons[interest] ?? '•', style: const TextStyle(fontSize: 12)),
+                          Text(
+                            icons[interest] ?? '•',
+                            style: const TextStyle(fontSize: 12),
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             interest,
-                            style: const TextStyle(fontSize: 12, color: Color(0xFFD63FBF), fontWeight: FontWeight.w500),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFFD63FBF),
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ],
                       ),
@@ -163,7 +236,10 @@ class ProfileSection extends StatelessWidget {
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: Colors.grey[50], borderRadius: BorderRadius.circular(12)),
+            decoration: BoxDecoration(
+              color: Colors.grey[50],
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Row(
               children: [
                 Expanded(
@@ -173,9 +249,16 @@ class ProfileSection extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         '${user!.points}',
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFFEAB308)),
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFFEAB308),
+                        ),
                       ),
-                      Text('Points', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                      Text(
+                        'Points',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                      ),
                     ],
                   ),
                 ),
@@ -187,9 +270,16 @@ class ProfileSection extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         '${user!.badges}',
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFFD63FBF)),
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFFD63FBF),
+                        ),
                       ),
-                      Text('Badges', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                      Text(
+                        'Badges',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                      ),
                     ],
                   ),
                 ),
@@ -206,7 +296,11 @@ class ProfileSection extends StatelessWidget {
       color: Colors.white,
       borderRadius: BorderRadius.circular(20),
       boxShadow: [
-        BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 15, offset: const Offset(0, 4)),
+        BoxShadow(
+          color: Colors.black.withOpacity(0.05),
+          blurRadius: 15,
+          offset: const Offset(0, 4),
+        ),
       ],
     );
   }
