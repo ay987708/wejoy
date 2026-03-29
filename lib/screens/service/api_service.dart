@@ -2,7 +2,12 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+
 const String baseUrl = 'http://localhost:5001';
+
+// ✅ Configuration automatique selon la plateforme
+
+
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();

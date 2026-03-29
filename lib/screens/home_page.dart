@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:wejoy/chat_tab.dart';
 import 'package:wejoy/screens/chat_page.dart';
 import 'package:wejoy/screens/service/api_service.dart';
 import 'package:wejoy/screens/activitie_page.dart';
@@ -13,7 +14,7 @@ import 'package:wejoy/widgets/home/recommended_section.dart';
 import 'package:wejoy/widgets/home/community_feed_section.dart';
 import 'package:wejoy/widgets/home/activities_section.dart';
 
-
+// ── Palette premium ────────────────────────────────────────────────────────
 const _rose   = Color(0xFFD63FBF);
 const _violet = Color(0xFF7C3AED);
 const _ink    = Color(0xFF0F0F1A);
@@ -60,7 +61,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     {'icon': Icons.home_rounded,         'label': 'Accueil'},
     {'icon': Icons.explore_rounded,      'label': 'Explorer'},
     {'icon': Icons.emoji_events_rounded, 'label': 'Defis'},
-    {'icon': Icons.chat_bubble_outline_rounded,       'label': 'Communautaire'},
+    {'icon': Icons.chat_rounded,       'label': 'communautaire'},
     {'icon': Icons.checklist_rounded,     'label': 'Taches'},
     {'icon': Icons.person_rounded,       'label': 'Profil'},
   ];
@@ -431,7 +432,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               WelcomeCard(user: _user, loading: _loadingUser),
               const SizedBox(height: 20),
-              ProfileSection(user: _user, loading: _loadingUser),
+              ProfileSection(user: _user,loading: _loadingUser,onProfileUpdated: _loadUser,),
               const SizedBox(height: 20),
               MoodSelector(selectedMood: _selectedMood, onMoodSelected: _onMoodSelected),
               const SizedBox(height: 20),
@@ -464,6 +465,24 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       default: return const SizedBox();
     }
   }
+
+  Widget _buildPlaceholder(String text, IconData icon, Color color) {
+    return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+      Container(
+        padding: const EdgeInsets.all(28),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.08),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, size: 48, color: color.withOpacity(0.5)),
+      ),
+      const SizedBox(height: 16),
+      Text(text, style: TextStyle(color: _slate, fontSize: 15, fontWeight: FontWeight.w500)),
+      const SizedBox(height: 6),
+      Text('Disponible prochainement', style: TextStyle(color: _slate.withOpacity(0.5), fontSize: 13)),
+    ]));
+  }
+
   // ── Header ────────────────────────────────────────────────────────────────
   Widget _buildHeader() {
     return Container(
