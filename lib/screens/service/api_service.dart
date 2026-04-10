@@ -28,14 +28,14 @@ class ApiService {
     _token = token;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('auth_token', token);
-    print('💾 Token sauvegardé');
+    print('Token sauvegardé');
   }
 
   Future<void> clearToken() async {
     _token = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('auth_token');
-    print('🗑️ Token effacé');
+    print('Token effacé');
   }
 
   // ─── Headers ─────────────────────────────────────────────────────────────
@@ -50,7 +50,7 @@ class ApiService {
 
   // ─── Gestion des réponses ─────────────────────────────────────────────────
   dynamic _handleResponse(http.Response response) {
-    print('📡 Status: ${response.statusCode}');
+    print('Status: ${response.statusCode}');
     try {
       final body = jsonDecode(response.body);
       if (response.statusCode >= 200 && response.statusCode < 300) return body;
@@ -133,10 +133,7 @@ class ApiService {
     );
     return UserProfile.fromJson(_handleResponse(response));
   }
-
-  // ════════════════════════════════════════════════════════════════════════
   // ACTIVITÉS
-  // ════════════════════════════════════════════════════════════════════════
 
   Future<List<Activity>> getRecommendedActivities() async {
     try {
@@ -162,7 +159,7 @@ class ApiService {
     } catch (e) { return []; }
   }
 
-  // ✅ NOUVEAU : créer une activité (utilisé par activitie_page)
+  // créer une activité (utilisé par activitie_page)
   Future<Map<String, dynamic>> createActivity(Map<String, dynamic> data) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/activities'),
@@ -172,7 +169,7 @@ class ApiService {
     return _handleResponse(response);
   }
 
-  // ✅ NOUVEAU : modifier une activité
+  //  modifier une activité
   Future<Map<String, dynamic>> updateActivity(String id, Map<String, dynamic> data) async {
     final response = await http.put(
       Uri.parse('$baseUrl/api/activities/$id'),
@@ -182,7 +179,7 @@ class ApiService {
     return _handleResponse(response);
   }
 
-  // ✅ NOUVEAU : supprimer une activité
+  // supprimer une activité
   Future<void> deleteActivity(String id) async {
     final response = await http.delete(
       Uri.parse('$baseUrl/api/activities/$id'),
@@ -206,10 +203,7 @@ class ApiService {
     );
     _handleResponse(response);
   }
-
-  // ════════════════════════════════════════════════════════════════════════
   // HUMEUR
-  // ════════════════════════════════════════════════════════════════════════
 
   Future<void> saveMood(String mood) async {
     await http.post(
@@ -218,10 +212,7 @@ class ApiService {
       body: jsonEncode({'mood': mood, 'date': DateTime.now().toIso8601String()}),
     );
   }
-
-  // ════════════════════════════════════════════════════════════════════════
   // NOTIFICATIONS
-  // ════════════════════════════════════════════════════════════════════════
 
   Future<List<dynamic>> getNotifications() async {
     try {
@@ -233,7 +224,7 @@ class ApiService {
     } catch (e) { return []; }
   }
 
-  // ✅ Marquer toutes les notifications comme lues
+  //Marquer toutes les notifications comme lues
   Future<void> markAllNotificationsRead() async {
     try {
       await http.put(
@@ -256,6 +247,19 @@ class ApiService {
   Future<dynamic> getDailyChallenge({String? moodName}) async {}
 
   Future<dynamic> getCommunityFeed() async {}
+
+
+Future<void> contactAdmin({required String sujet, required String message}) async {
+  final response = await http.post(
+    Uri.parse('$baseUrl/api/demandes'),
+    headers: await _headers(),
+    body: jsonEncode({
+      'titre':   sujet,
+      'message': message,
+    }),
+  );
+  _handleResponse(response);
+}
 }
 
 // ─── Exception ────────────────────────────────────────────────────────────────
@@ -266,10 +270,7 @@ class ApiException implements Exception {
   @override
   String toString() => 'ApiException($statusCode): $message';
 }
-
-// ════════════════════════════════════════════════════════════════════════════
 // MODÈLES
-// ════════════════════════════════════════════════════════════════════════════
 
 class UserProfile {
   final String id;
@@ -316,7 +317,7 @@ class Activity {
   final String category;
   final String description;
   final String imageUrl;
-  final bool isOfficial;       // ✅ AJOUTÉ
+  final bool isOfficial;      
   final String? date;
   final String? timeSlot;
   final String? location;
@@ -324,7 +325,7 @@ class Activity {
   final int? maxParticipants;
   final bool isIndividual;
   final bool isDaily;
-  final Map<String, dynamic>? createdBy;  // ✅ AJOUTÉ
+  final Map<String, dynamic>? createdBy;  
 
   Activity({
     required this.id,
@@ -364,4 +365,5 @@ class Activity {
     if (currentParticipants == null || maxParticipants == null) return null;
     return '$currentParticipants/$maxParticipants';
   }
+
 }

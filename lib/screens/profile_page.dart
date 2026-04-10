@@ -122,7 +122,6 @@ class _ProfilePageState extends State<ProfilePage>
 
   Widget _buildAvatarContent() {
     final avatar = _user?.avatarUrl;
-
     if (_isNetworkImage(avatar)) {
       return CachedNetworkImage(
         imageUrl: avatar!,
@@ -130,37 +129,160 @@ class _ProfilePageState extends State<ProfilePage>
         errorWidget: (_, __, ___) => _avatarFallback(),
       );
     }
-
     if (avatar != null && avatar.isNotEmpty) {
       return Container(
         color: _rose.withOpacity(0.15),
-        child: Center(
-          child: Text(
-            avatar,
-            style: const TextStyle(fontSize: 38),
-          ),
-        ),
+        child: Center(child: Text(avatar, style: const TextStyle(fontSize: 38))),
       );
     }
-
     return _avatarFallback();
   }
 
   void _snack(String msg, {bool error = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          msg,
-          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+      backgroundColor: error ? const Color(0xFFEF4444) : const Color(0xFF10B981),
+      behavior: SnackBarBehavior.floating,
+      margin: const EdgeInsets.all(16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+    ));
+  }
+
+  // ── Contacter l'admin ─────────────────────────────────────────────────────
+  void _showContactAdmin() {
+    final subjectCtrl = TextEditingController();
+    final messageCtrl = TextEditingController();
+    String selectedType = 'Problème technique';
+    final types = [
+      'Problème technique',
+      'Signaler un utilisateur',
+      'Suggestion',
+      'Question générale',
+      'Autre',
+    ];
+
+    showDialog(
+      context: context,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setS) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          child: Container(
+            width: 480,
+            padding: const EdgeInsets.all(24),
+            child: SingleChildScrollView(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                // Header
+                Row(children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(colors: [_rose, _violet]),
+                      borderRadius: BorderRadius.circular(12)),
+                    child: const Icon(Icons.support_agent_rounded, color: Colors.white, size: 22)),
+                  const SizedBox(width: 12),
+                  const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('Contacter l\'administrateur',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _ink)),
+                    SizedBox(height: 2),
+                    Text('Nous répondons sous 24h',
+                      style: TextStyle(fontSize: 11, color: _slate)),
+                  ])),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () => Navigator.pop(ctx)),
+                ]),
+                const SizedBox(height: 20),
+
+                // Type de demande
+                const Text('Type de demande',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _ink)),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: _snow,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: _border)),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: selectedType,
+                      isExpanded: true,
+                      style: const TextStyle(fontSize: 13, color: _ink),
+                      items: types.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                      onChanged: (v) => setS(() => selectedType = v!),
+                    ))),
+                const SizedBox(height: 12),
+
+                // Sujet
+                TextField(
+                  controller: subjectCtrl,
+                  style: const TextStyle(fontSize: 13),
+                  decoration: _fieldDeco('Sujet', Icons.subject_rounded)),
+                const SizedBox(height: 12),
+
+                // Message
+                TextField(
+                  controller: messageCtrl,
+                  maxLines: 4,
+                  style: const TextStyle(fontSize: 13),
+                  decoration: _fieldDeco('Votre message', Icons.message_outlined)),
+                const SizedBox(height: 20),
+
+                // Boutons
+                Row(children: [
+                  Expanded(child: OutlinedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: _slate,
+                      side: const BorderSide(color: _border),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                    child: const Text('Annuler', style: TextStyle(fontWeight: FontWeight.w500)))),
+                  const SizedBox(width: 12),
+                  Expanded(child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _rose,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                    onPressed: () async {
+                      if (subjectCtrl.text.trim().isEmpty || messageCtrl.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+                          content: Text('Veuillez remplir tous les champs'),
+                          backgroundColor: Colors.red));
+                        return;
+                      }
+                      Navigator.pop(ctx);
+                      try {
+                        await _api.contactAdmin(
+                          sujet: '$selectedType : ${subjectCtrl.text.trim()}',
+                          message: messageCtrl.text.trim());
+                        if (mounted) _snack('Message envoyé à l\'administrateur ✅');
+                      } catch (e) {
+                        if (mounted) _snack('Erreur: $e', error: true);
+                      }
+                    },
+                    child: const Text('Envoyer', style: TextStyle(fontWeight: FontWeight.w600)))),
+                ]),
+              ]),
+            ),
+          ),
         ),
-        backgroundColor:
-            error ? const Color(0xFFEF4444) : const Color(0xFF10B981),
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
     );
   }
+
+  InputDecoration _fieldDeco(String label, IconData icon) => InputDecoration(
+    labelText: label,
+    labelStyle: TextStyle(color: _slate.withOpacity(0.7), fontSize: 13),
+    prefixIcon: Icon(icon, size: 18, color: _slate.withOpacity(0.5)),
+    filled: true,
+    fillColor: _snow,
+    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _border)),
+    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _border)),
+    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _rose, width: 2)));
 
   @override
   Widget build(BuildContext context) {
@@ -172,9 +294,7 @@ class _ProfilePageState extends State<ProfilePage>
         onRefresh: _load,
         color: _rose,
         child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(
-            parent: BouncingScrollPhysics(),
-          ),
+          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
           slivers: [
             SliverAppBar(
               expandedHeight: 240,
@@ -193,28 +313,27 @@ class _ProfilePageState extends State<ProfilePage>
               ),
               bottom: PreferredSize(
                 preferredSize: const Size.fromHeight(0),
-                child: Container(
-                  height: 1,
-                  color: _border,
-                ),
+                child: Container(height: 1, color: _border),
               ),
             ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildStats(),
-                    const SizedBox(height: 20),
-                    _buildInterests(),
-                    const SizedBox(height: 20),
-                    _buildMyActivities(),
-                    const SizedBox(height: 20),
-                    _buildSettings(),
-                    const SizedBox(height: 32),
-                  ],
-                ),
+           SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: SingleChildScrollView(          // <<⃣ AJOUT ICI
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildStats(),
+                  const SizedBox(height: 30),
+                  _buildInterests(),
+                  const SizedBox(height: 30),
+                  _buildMyActivities(),
+                  const SizedBox(height: 30),
+                  _buildSettings(),
+                  const SizedBox(height: 42),
+                   ],
+                  ),
+                ),                                      // <<⃣ FIN AJOUT
               ),
             ),
           ],
@@ -236,134 +355,61 @@ class _ProfilePageState extends State<ProfilePage>
             ),
           ),
         ),
-        Positioned(
-          top: -30,
-          right: -30,
-          child: Container(
-            width: 160,
-            height: 160,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.06),
-              shape: BoxShape.circle,
-            ),
-          ),
-        ),
-        Positioned(
-          bottom: -20,
-          left: -20,
-          child: Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.04),
-              shape: BoxShape.circle,
-            ),
-          ),
-        ),
+        Positioned(top: -30, right: -30, child: Container(
+          width: 160, height: 160,
+          decoration: BoxDecoration(color: Colors.white.withOpacity(0.06), shape: BoxShape.circle))),
+        Positioned(bottom: -20, left: -20, child: Container(
+          width: 120, height: 120,
+          decoration: BoxDecoration(color: Colors.white.withOpacity(0.04), shape: BoxShape.circle))),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 50, 20, 20),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Stack(
-                children: [
-                  Container(
-                    width: 90,
-                    height: 90,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 3),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 16,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
-                    ),
-                    child: ClipOval(
-                      child: _buildAvatarContent(),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: GestureDetector(
-                      onTap: _openEditProfilePage,
-                      child: Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          color: _editing
-                              ? const Color(0xFF10B981)
-                              : Colors.white,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.15),
-                              blurRadius: 6,
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          _editing ? Icons.check_rounded : Icons.edit_rounded,
-                          size: 14,
-                          color: _editing ? Colors.white : _rose,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              if (_editing)
-                Container(
-                  width: 200,
-                  height: 38,
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Stack(children: [
+              Container(
+                width: 90, height: 90,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 3),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 16, offset: const Offset(0, 6))]),
+                child: ClipOval(child: _buildAvatarContent())),
+              Positioned(bottom: 0, right: 0, child: GestureDetector(
+                onTap: _openEditProfilePage,
+                child: Container(
+                  width: 28, height: 28,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.white.withOpacity(0.4)),
-                  ),
-                  child: TextField(
-                    controller: _usernameCtrl,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
-                    ),
-                    decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      hintText: 'Nom d\'utilisateur',
-                      hintStyle: TextStyle(color: Colors.white60),
-                    ),
-                  ),
-                )
-              else
-                Text(
-                  _user?.username ?? '',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-              const SizedBox(height: 4),
-              Text(
-                'Membre depuis ${_user?.memberSince ?? ''}',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.75),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
+                    color: _editing ? const Color(0xFF10B981) : Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 6)]),
+                  child: Icon(
+                    _editing ? Icons.check_rounded : Icons.edit_rounded,
+                    size: 14,
+                    color: _editing ? Colors.white : _rose)))),
+            ]),
+            const SizedBox(height: 12),
+            if (_editing)
+              Container(
+                width: 200, height: 38,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.white.withOpacity(0.4))),
+                child: TextField(
+                  controller: _usernameCtrl,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16),
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    hintText: 'Nom d\'utilisateur',
+                    hintStyle: TextStyle(color: Colors.white60))))
+            else
+              Text(_user?.username ?? '',
+                style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -0.5)),
+            const SizedBox(height: 4),
+            Text('Membre depuis ${_user?.memberSince ?? ''}',
+              style: TextStyle(color: Colors.white.withOpacity(0.75), fontSize: 12, fontWeight: FontWeight.w500)),
+          ]),
         ),
       ],
     );
@@ -373,100 +419,34 @@ class _ProfilePageState extends State<ProfilePage>
     final name = _user?.username ?? '?';
     return Container(
       color: _rose.withOpacity(0.3),
-      child: Center(
-        child: Text(
-          name.isNotEmpty ? name[0].toUpperCase() : '?',
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 36,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ),
-    );
+      child: Center(child: Text(
+        name.isNotEmpty ? name[0].toUpperCase() : '?',
+        style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.w800))));
   }
 
   Widget _buildStats() {
-    return Row(
-      children: [
-        Expanded(
-          child: _statCard(
-            'Points',
-            '${_user?.points ?? 0}',
-            Icons.emoji_events_rounded,
-            _gold,
-            '🏆',
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _statCard(
-            'Badges',
-            '${_user?.badges ?? 0}',
-            Icons.star_rounded,
-            _rose,
-            '⭐',
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _statCard(
-            'Activités',
-            '${_myActivities.length}',
-            Icons.local_fire_department_rounded,
-            _violet,
-            '🔥',
-          ),
-        ),
-      ],
-    );
+    return Row(children: [
+      Expanded(child: _statCard('Points', '${_user?.points ?? 0}', Icons.emoji_events_rounded, _gold, '🏆')),
+      const SizedBox(width: 12),
+      Expanded(child: _statCard('Badges', '${_user?.badges ?? 0}', Icons.star_rounded, _rose, '⭐')),
+      const SizedBox(width: 12),
+      Expanded(child: _statCard('Activités', '${_myActivities.length}', Icons.local_fire_department_rounded, _violet, '🔥')),
+    ]);
   }
 
-  Widget _statCard(
-    String label,
-    String value,
-    IconData icon,
-    Color color,
-    String emoji,
-  ) {
+  Widget _statCard(String label, String value, IconData icon, Color color, String emoji) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
       decoration: BoxDecoration(
-        color: _card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _border),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 22)),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11,
-              color: _slate,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
+        color: _card, borderRadius: BorderRadius.circular(16), border: Border.all(color: _border),
+        boxShadow: [BoxShadow(color: color.withOpacity(0.06), blurRadius: 12, offset: const Offset(0, 4))]),
+      child: Column(children: [
+        Text(emoji, style: const TextStyle(fontSize: 22)),
+        const SizedBox(height: 6),
+        Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: color)),
+        const SizedBox(height: 2),
+        Text(label, style: const TextStyle(fontSize: 11, color: _slate, fontWeight: FontWeight.w500)),
+      ]));
   }
 
   Widget _buildInterests() {
@@ -478,162 +458,61 @@ class _ProfilePageState extends State<ProfilePage>
           ? GestureDetector(
               onTap: _saving ? null : _saveProfile,
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(colors: [_rose, _violet]),
-                  borderRadius: BorderRadius.circular(20),
-                ),
+                  borderRadius: BorderRadius.circular(20)),
                 child: _saving
-                    ? const SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Text(
-                        'Sauvegarder',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-              ),
-            )
+                    ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Text('Sauvegarder', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600))))
           : null,
       child: _editing
           ? Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: 8, runSpacing: 8,
               children: _allInterests.map((interest) {
                 final sel = _selectedInterests.contains(interest);
                 return GestureDetector(
-                  onTap: () => setState(() {
-                    sel
-                        ? _selectedInterests.remove(interest)
-                        : _selectedInterests.add(interest);
-                  }),
+                  onTap: () => setState(() { sel ? _selectedInterests.remove(interest) : _selectedInterests.add(interest); }),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
                       color: sel ? _rose : _snow,
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                        color: sel ? _rose : _border,
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _interestEmoji(interest),
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                        const SizedBox(width: 5),
-                        Text(
-                          interest,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: sel ? Colors.white : _slate,
-                          ),
-                        ),
-                        if (sel) ...[
-                          const SizedBox(width: 4),
-                          const Icon(
-                            Icons.check_rounded,
-                            size: 14,
-                            color: Colors.white,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                );
-              }).toList(),
-            )
+                      border: Border.all(color: sel ? _rose : _border, width: 1.5)),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Text(_interestEmoji(interest), style: const TextStyle(fontSize: 13)),
+                      const SizedBox(width: 5),
+                      Text(interest, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: sel ? Colors.white : _slate)),
+                      if (sel) ...[const SizedBox(width: 4), const Icon(Icons.check_rounded, size: 14, color: Colors.white)],
+                    ])));
+              }).toList())
           : _selectedInterests.isEmpty
               ? Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.info_outline_rounded,
-                        size: 16,
-                        color: _slate.withOpacity(0.5),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Aucun centre d\'intérêt — appuyez sur Modifier',
-                        style: TextStyle(
-                          color: _slate.withOpacity(0.6),
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                )
+                  child: Row(children: [
+                    Icon(Icons.info_outline_rounded, size: 16, color: _slate.withOpacity(0.5)),
+                    const SizedBox(width: 8),
+                    Text('Aucun centre d\'intérêt — appuyez sur Modifier',
+                      style: TextStyle(color: _slate.withOpacity(0.6), fontSize: 13))]))
               : Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: _selectedInterests
-                      .map(
-                        (i) => Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                _rose.withOpacity(0.1),
-                                _violet.withOpacity(0.08),
-                              ],
-                            ),
-                            borderRadius: BorderRadius.circular(24),
-                            border:
-                                Border.all(color: _rose.withOpacity(0.2)),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                _interestEmoji(i),
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                              const SizedBox(width: 5),
-                              Text(
-                                i,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: _rose,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                      .toList(),
-                ),
+                  spacing: 8, runSpacing: 8,
+                  children: _selectedInterests.map((i) => Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: [_rose.withOpacity(0.1), _violet.withOpacity(0.08)]),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: _rose.withOpacity(0.2))),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Text(_interestEmoji(i), style: const TextStyle(fontSize: 12)),
+                      const SizedBox(width: 5),
+                      Text(i, style: const TextStyle(fontSize: 12, color: _rose, fontWeight: FontWeight.w600)),
+                    ]))).toList()),
     );
   }
 
   String _interestEmoji(String i) {
-    const m = {
-      'Cuisine': '🍳',
-      'Lecture': '📚',
-      'Jardinage': '🌱',
-      'Yoga': '🧘',
-      'Sport': '⚽',
-      'Autre': '✨',
-    };
+    const m = {'Cuisine': '🍳', 'Lecture': '📚', 'Jardinage': '🌱', 'Yoga': '🧘', 'Sport': '⚽', 'Autre': '✨'};
     return m[i] ?? '•';
   }
 
@@ -645,301 +524,124 @@ class _ProfilePageState extends State<ProfilePage>
       child: _myActivities.isEmpty
           ? Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.explore_outlined,
-                    size: 16,
-                    color: _slate.withOpacity(0.5),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Vous n\'avez rejoint aucune activité',
-                    style: TextStyle(
-                      color: _slate.withOpacity(0.6),
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : Column(
-              children: _myActivities.take(4).map((a) => _activityRow(a)).toList(),
-            ),
+              child: Row(children: [
+                Icon(Icons.explore_outlined, size: 16, color: _slate.withOpacity(0.5)),
+                const SizedBox(width: 8),
+                Text('Vous n\'avez rejoint aucune activité',
+                  style: TextStyle(color: _slate.withOpacity(0.6), fontSize: 13))]))
+          : Column(children: _myActivities.take(4).map((a) => _activityRow(a)).toList()),
     );
   }
 
   Widget _activityRow(Activity a) {
     const catColors = {
-      'Cuisine': Color(0xFFFF6B6B),
-      'Lecture': Color(0xFF4ECDC4),
-      'Yoga': Color(0xFF96CEB4),
-      'Sport': _violet,
-      'Jardinage': Color(0xFF45B7D1),
-      'Autre': _slate,
+      'Cuisine': Color(0xFFFF6B6B), 'Lecture': Color(0xFF4ECDC4),
+      'Yoga': Color(0xFF96CEB4), 'Sport': _violet,
+      'Jardinage': Color(0xFF45B7D1), 'Autre': _slate,
     };
     final color = catColors[a.category] ?? _slate;
-
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Center(
-              child: Text(
-                _categoryEmoji(a.category),
-                style: const TextStyle(fontSize: 18),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  a.title,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: _ink,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  a.category,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: color,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              'Rejoint',
-              style: TextStyle(
-                fontSize: 10,
-                color: color,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+      child: Row(children: [
+        Container(width: 42, height: 42,
+          decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(12)),
+          child: Center(child: Text(_categoryEmoji(a.category), style: const TextStyle(fontSize: 18)))),
+        const SizedBox(width: 12),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(a.title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _ink),
+            maxLines: 1, overflow: TextOverflow.ellipsis),
+          const SizedBox(height: 2),
+          Text(a.category, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w500)),
+        ])),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+          child: Text('Rejoint', style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w600))),
+      ]));
   }
 
   String _categoryEmoji(String c) {
-    const m = {
-      'Cuisine': '🍳',
-      'Lecture': '📚',
-      'Jardinage': '🌱',
-      'Yoga': '🧘',
-      'Sport': '⚽',
-      'Autre': '✨',
-    };
+    const m = {'Cuisine': '🍳', 'Lecture': '📚', 'Jardinage': '🌱', 'Yoga': '🧘', 'Sport': '⚽', 'Autre': '✨'};
     return m[c] ?? '•';
   }
 
+  // ── Settings — MODIFIÉ : sans "Modifier profil", sans "Se déconnecter", ──
+  // ── "Notifications" remplacé par "Contacter l'administrateur"           ──
   Widget _buildSettings() {
     return _sectionCard(
       title: 'Compte',
       icon: Icons.settings_outlined,
       iconColor: _slate,
-      child: Column(
-        children: [
-          _settingRow(
-            Icons.edit_outlined,
-            'Modifier le profil',
-            _rose,
-            _openEditProfilePage,
-          ),
-          _divider(),
-          _settingRow(
-            Icons.lock_outline_rounded,
-            'Changer le mot de passe',
-            _violet,
-            () {},
-          ),
-          _divider(),
-          _settingRow(
-            Icons.notifications_outlined,
-            'Notifications',
-            _slate,
-            () {},
-          ),
-          _divider(),
-          _settingRow(
-            Icons.logout_rounded,
-            'Se déconnecter',
-            const Color(0xFFEF4444),
-            () async {
-              await _api.logout();
-              if (mounted) {
-                Navigator.pushReplacementNamed(context, '/login');
-              }
-            },
-          ),
-        ],
-      ),
+      child: Column(children: [
+        _settingRow(Icons.lock_outline_rounded, 'Changer le mot de passe', _violet, () {}),
+        _divider(),
+        _settingRow(Icons.support_agent_rounded, 'Contacter l\'administrateur', _rose, _showContactAdmin),
+      ]),
     );
   }
 
-  Widget _settingRow(
-    IconData icon,
-    String label,
-    Color color,
-    VoidCallback onTap,
-  ) {
+  Widget _settingRow(IconData icon, String label, Color color, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, size: 18, color: color),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: _ink,
-                ),
-              ),
-            ),
-            Icon(
-              Icons.chevron_right_rounded,
-              size: 18,
-              color: _slate.withOpacity(0.4),
-            ),
-          ],
-        ),
-      ),
-    );
+        child: Row(children: [
+          Container(width: 36, height: 36,
+            decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(10)),
+            child: Icon(icon, size: 18, color: color)),
+          const SizedBox(width: 12),
+          Expanded(child: Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: _ink))),
+          Icon(Icons.chevron_right_rounded, size: 18, color: _slate.withOpacity(0.4)),
+        ])));
   }
 
   Widget _divider() => Divider(height: 1, color: _border, indent: 48);
 
   Widget _sectionCard({
-    required String title,
-    required IconData icon,
-    required Color iconColor,
-    required Widget child,
-    Widget? trailing,
+    required String title, required IconData icon,
+    required Color iconColor, required Widget child, Widget? trailing,
   }) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: _card,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _border),
-        boxShadow: [
-          BoxShadow(
-            color: _ink.withOpacity(0.03),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(9),
-                ),
-                child: Icon(icon, size: 16, color: iconColor),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: _ink,
-                ),
-              ),
-              const Spacer(),
-              if (trailing != null) trailing,
-            ],
-          ),
-          const SizedBox(height: 14),
-          child,
-        ],
-      ),
-    );
+        color: _card, borderRadius: BorderRadius.circular(20), border: Border.all(color: _border),
+        boxShadow: [BoxShadow(color: _ink.withOpacity(0.03), blurRadius: 12, offset: const Offset(0, 4))]),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(color: iconColor.withOpacity(0.1), borderRadius: BorderRadius.circular(9)),
+            child: Icon(icon, size: 16, color: iconColor)),
+          const SizedBox(width: 10),
+          Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _ink)),
+          const Spacer(),
+          if (trailing != null) trailing,
+        ]),
+        const SizedBox(height: 14),
+        child,
+      ]));
   }
 
   Widget _buildSkeleton() {
     return Scaffold(
       backgroundColor: _snow,
-      body: Column(
-        children: [
-          Container(
-            height: 240,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [_rose, _violet],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Column(
-              children: [
-                _skeletonBox(height: 100, radius: 20),
-                const SizedBox(height: 16),
-                _skeletonBox(height: 120, radius: 20),
-              ],
-            ),
-          ),
-        ],
-      ),
+      body: Column(children: [
+        Container(height: 220,
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(colors: [_rose, _violet], begin: Alignment.topLeft, end: Alignment.bottomRight))),
+        const SizedBox(height: 20),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: Column(children: [
+          _skeletonBox(height: 100, radius: 20),
+          const SizedBox(height: 16),
+          _skeletonBox(height: 120, radius: 20),
+        ])),
+      ]),
     );
   }
 
   Widget _skeletonBox({required double height, double radius = 12}) {
     return Container(
-      height: height,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(radius),
-      ),
-    );
+      height: height, width: double.infinity,
+      decoration: BoxDecoration(color: Colors.grey[200], borderRadius: BorderRadius.circular(radius)));
   }
 }

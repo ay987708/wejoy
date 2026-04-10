@@ -9,9 +9,7 @@ import 'package:wejoy/screens/home_page.dart' hide Widget;
 
 const String _baseUrl = 'http://localhost:5001';
 
-// =============================================
 // MODERN TOAST NOTIFICATION SYSTEM
-// =============================================
 
 enum ToastType { success, error, warning, info }
 
@@ -212,9 +210,8 @@ class SocialAuthService {
   static Future<void> signInWithApple(BuildContext context) async { ModernLoadingOverlay.show(context, message: "Connexion avec Apple..."); await Future.delayed(const Duration(seconds: 2)); ModernLoadingOverlay.hide(); ModernToast.show(context, title: "Apple", message: "Connexion Apple réussie !", type: ToastType.success); }
 }
 
-// =============================================
+
 // LOGIN PAGE
-// =============================================
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -223,7 +220,7 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   // Mode: 'user' ou 'admin'
-  String _mode = 'user'; // ← 'user' | 'admin'
+  String _mode = 'user'; 
   bool isLogin = true;
   bool obscurePassword = true;
   bool obscureConfirm = true;

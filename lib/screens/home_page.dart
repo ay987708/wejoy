@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:wejoy/chat_tab.dart';
 import 'package:wejoy/screens/chat_page.dart';
 import 'package:wejoy/screens/service/api_service.dart';
 import 'package:wejoy/screens/activitie_page.dart';
