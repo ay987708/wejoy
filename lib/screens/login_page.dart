@@ -7,7 +7,7 @@ import 'package:wejoy/screens/admin/admin_shell.dart';
 import 'dart:convert';
 import 'package:wejoy/screens/home_page.dart' hide Widget;
 
-const String _baseUrl = 'http://localhost:5001';
+const String _baseUrl = 'http://localhost:5000';
 
 // MODERN TOAST NOTIFICATION SYSTEM
 

@@ -13,17 +13,20 @@ import 'package:wejoy/widgets/home/recommended_section.dart';
 import 'package:wejoy/widgets/home/community_feed_section.dart';
 import 'package:wejoy/widgets/home/activities_section.dart';
 
-// ── Palette premium ────────────────────────────────────────────────────────
-const _rose   = Color(0xFFD63FBF);
-const _violet = Color(0xFF7C3AED);
-const _ink    = Color(0xFF0F0F1A);
-const _slate  = Color(0xFF64748B);
-const _snow   = Color(0xFFFAFAFC);
-const _card   = Color(0xFFFFFFFF);
-const _border = Color(0xFFEEEEF5);
+const _rose = Color(0xFFE84C88);
+const _violet = Color(0xFF7C4DFF);
+const _gold = Color(0xFFFFC857);
+const _peach = Color(0xFFFFE8D9);
+const _cream = Color(0xFFFAF4EE);
+const _snow = Color(0xFFF8F1EA);
+const _card = Color(0xFFFFFFFF);
+const _ink = Color(0xFF1F1A24);
+const _slate = Color(0xFF6E6A78);
+const _border = Color(0xFFF1E6DD);
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
   @override
   State<HomePage> createState() => _HomePageState();
 }
@@ -57,19 +60,25 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   final _categories = ['Tous', 'Cuisine', 'Lecture', 'Jardinage', 'Yoga'];
 
   static const _navItems = [
-    {'icon': Icons.home_rounded,         'label': 'Accueil'},
-    {'icon': Icons.explore_rounded,      'label': 'Explorer'},
-    {'icon': Icons.emoji_events_rounded, 'label': 'Defis'},
-    {'icon': Icons.chat_rounded,       'label': 'communautaire'},
-    {'icon': Icons.checklist_rounded,     'label': 'Taches'},
-    {'icon': Icons.person_rounded,       'label': 'Profil'},
+    {'icon': Icons.home_rounded, 'label': 'Accueil'},
+    {'icon': Icons.explore_rounded, 'label': 'Explorer'},
+    {'icon': Icons.emoji_events_rounded, 'label': 'Défis'},
+    {'icon': Icons.chat_rounded, 'label': 'Communauté'},
+    {'icon': Icons.checklist_rounded, 'label': 'Tâches'},
+    {'icon': Icons.person_rounded, 'label': 'Profil'},
   ];
 
   @override
   void initState() {
     super.initState();
-    _fadeController = AnimationController(duration: const Duration(milliseconds: 700), vsync: this);
-    _fadeAnimation  = CurvedAnimation(parent: _fadeController, curve: Curves.easeOutCubic);
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 700),
+      vsync: this,
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOutCubic,
+    );
     _fadeController.forward();
     _loadData();
   }
@@ -84,8 +93,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   Future<void> _loadData() async {
     try {
       await Future.wait([
-        _loadUser(), _loadRecommended(), _loadAllActivities(),
-        _loadNotifications(), _loadCommunityFeed(), _loadDailyChallenge(),
+        _loadUser(),
+        _loadRecommended(),
+        _loadAllActivities(),
+        _loadNotifications(),
+        _loadCommunityFeed(),
+        _loadDailyChallenge(),
       ]);
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
@@ -98,8 +111,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       final user = await _api.getMyProfile();
       if (mounted) setState(() => _user = user);
     } on ApiException catch (e) {
-      if (e.statusCode == 401 && mounted) Navigator.pushReplacementNamed(context, '/login');
-      else if (mounted) setState(() => _error = e.message);
+      if (e.statusCode == 401 && mounted) {
+        Navigator.pushReplacementNamed(context, '/login');
+      } else if (mounted) {
+        setState(() => _error = e.message);
+      }
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     } finally {
@@ -112,7 +128,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       setState(() => _loadingRecommended = true);
       final r = await _api.getRecommendedActivities();
       if (mounted) setState(() => _recommended = r);
-    } catch (_) {} finally {
+    } catch (_) {
+    } finally {
       if (mounted) setState(() => _loadingRecommended = false);
     }
   }
@@ -122,7 +139,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       setState(() => _loadingAll = true);
       final a = await _api.getAllActivities();
       if (mounted) setState(() => _allActivities = a);
-    } catch (_) {} finally {
+    } catch (_) {
+    } finally {
       if (mounted) setState(() => _loadingAll = false);
     }
   }
@@ -130,7 +148,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   Future<void> _loadNotifications() async {
     try {
       final n = await _api.getNotifications();
-      if (mounted) setState(() => _notificationCount = n.where((x) => x['lu'] == false).length);
+      if (mounted) {
+        setState(() {
+          _notificationCount = n.where((x) => x['lu'] == false).length;
+        });
+      }
     } catch (_) {}
   }
 
@@ -139,7 +161,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     try {
       final f = await _api.getCommunityFeed();
       if (mounted) setState(() => _communityFeed = f);
-    } catch (_) {} finally {
+    } catch (_) {
+    } finally {
       if (mounted) setState(() => _loadingFeed = false);
     }
   }
@@ -149,7 +172,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     try {
       final c = await _api.getDailyChallenge(moodName: _selectedMood?.name);
       if (mounted) setState(() => _dailyChallenge = c);
-    } catch (_) {} finally {
+    } catch (_) {
+    } finally {
       if (mounted) setState(() => _loadingChallenge = false);
     }
   }
@@ -162,16 +186,21 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         search: _searchQuery,
       );
       if (mounted) setState(() => _allActivities = a);
-    } catch (_) {} finally {
+    } catch (_) {
+    } finally {
       if (mounted) setState(() => _loadingAll = false);
     }
   }
 
   Future<void> _onMoodSelected(Mood mood) async {
     setState(() => _selectedMood = mood);
+    await Future.delayed(const Duration(milliseconds: 120));
     try {
       await _api.saveMood(mood.name);
-      await Future.wait([_loadRecommended(), _loadDailyChallenge()]);
+      await Future.wait([
+        _loadRecommended(),
+        _loadDailyChallenge(),
+      ]);
     } catch (_) {
       if (mounted) _snackError("Erreur lors de l'enregistrement de l'humeur");
     }
@@ -195,7 +224,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     try {
       await _api.startChallenge(_dailyChallenge!['id']);
       if (!mounted) return;
-      _snackSuccess('Defi commence ! +${_dailyChallenge!['points']} points 🎉');
+      _snackSuccess('Défi commencé ! +${_dailyChallenge!['points']} points 🎉');
       await _loadUser();
       await _loadDailyChallenge();
     } catch (e) {
@@ -204,42 +233,58 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   void _snackSuccess(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Row(children: [
-        Container(padding: const EdgeInsets.all(4),
-          decoration: const BoxDecoration(color: Colors.white24, shape: BoxShape.circle),
-          child: const Icon(Icons.check_rounded, color: Colors.white, size: 16)),
-        const SizedBox(width: 10),
-        Expanded(child: Text(msg, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13))),
-      ]),
-      backgroundColor: const Color(0xFF10B981),
-      behavior: SnackBarBehavior.floating,
-      margin: const EdgeInsets.all(16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      duration: const Duration(seconds: 3),
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                color: Colors.white24,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.check_rounded, color: Colors.white, size: 16),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(msg,
+                  style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFF10B981),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
   void _snackError(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg, style: const TextStyle(fontSize: 13)),
-      backgroundColor: const Color(0xFFEF4444),
-      behavior: SnackBarBehavior.floating,
-      margin: const EdgeInsets.all(16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg, style: const TextStyle(fontSize: 13)),
+        backgroundColor: const Color(0xFFEF4444),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+    );
   }
 
-  // ── Panneau notifications ─────────────────────────────────────────────────
   void _showNotifications() async {
     List notifs = [];
-    try { notifs = await _api.getNotifications(); } catch (_) {}
+    try {
+      notifs = await _api.getNotifications();
+    } catch (_) {}
+
     if (!mounted) return;
 
     showDialog(
       context: context,
       builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
         elevation: 0,
         backgroundColor: Colors.transparent,
         child: Container(
@@ -247,141 +292,229 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           constraints: const BoxConstraints(maxHeight: 560),
           decoration: BoxDecoration(
             color: _card,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(26),
             boxShadow: [
-              BoxShadow(color: _ink.withOpacity(0.08), blurRadius: 40, offset: const Offset(0, 16)),
+              BoxShadow(
+                color: _ink.withOpacity(0.08),
+                blurRadius: 40,
+                offset: const Offset(0, 16),
+              ),
             ],
           ),
-          child: Column(children: [
-            // ── Header gradient ──────────────────────────────────────────────
-            Container(
-              padding: const EdgeInsets.fromLTRB(20, 20, 12, 20),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(colors: [_rose, _violet], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              child: Row(children: [
-                const Icon(Icons.notifications_rounded, color: Colors.white, size: 22),
-                const SizedBox(width: 10),
-                const Text('Notifications', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700)),
-                const Spacer(),
-                if (_notificationCount > 0)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(20)),
-                    child: Text('$_notificationCount non lues',
-                      style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
-                  ),
-                const SizedBox(width: 6),
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(color: Colors.white24, shape: BoxShape.circle),
-                    child: const Icon(Icons.close_rounded, color: Colors.white, size: 16),
-                  ),
-                ),
-              ]),
-            ),
-            // ── Liste ────────────────────────────────────────────────────────
-            Expanded(
-              child: notifs.isEmpty
-                ? Padding(
-                    padding: const EdgeInsets.all(40),
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: _rose.withOpacity(0.06),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(Icons.notifications_off_outlined, size: 40, color: _rose.withOpacity(0.4)),
-                      ),
-                      const SizedBox(height: 16),
-                      Text('Aucune notification', style: TextStyle(
-                        color: _slate, fontSize: 15, fontWeight: FontWeight.w500)),
-                      const SizedBox(height: 6),
-                      Text('Vous etes a jour !', style: TextStyle(color: _slate.withOpacity(0.6), fontSize: 13)),
-                    ]),
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: notifs.length,
-                    separatorBuilder: (_, __) => Divider(height: 1, color: _border, indent: 16, endIndent: 16),
-                    itemBuilder: (_, i) {
-                      final n = notifs[i];
-                      final bool lu = n['lu'] == true;
-                      final String type = n['type'] ?? 'info';
-                      final Color typeColor = type == 'service' ? const Color(0xFF10B981)
-                          : type == 'activite' ? _violet : _rose;
-                      final IconData typeIcon = type == 'service' ? Icons.celebration_rounded
-                          : type == 'activite' ? Icons.flash_on_rounded : Icons.campaign_rounded;
-
-                      return Container(
-                        color: lu ? Colors.transparent : _rose.withOpacity(0.025),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Container(
-                            width: 40, height: 40,
-                            decoration: BoxDecoration(
-                              color: typeColor.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(typeIcon, color: typeColor, size: 20),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            Row(children: [
-                              Expanded(child: Text(n['titre'] ?? '', style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: lu ? FontWeight.w400 : FontWeight.w600,
-                                color: _ink,
-                              ))),
-                              if (!lu) Container(
-                                width: 7, height: 7,
-                                decoration: const BoxDecoration(color: _rose, shape: BoxShape.circle),
-                              ),
-                            ]),
-                            const SizedBox(height: 3),
-                            Text(n['message'] ?? '',
-                              style: TextStyle(fontSize: 12, color: _slate, height: 1.4),
-                              maxLines: 2, overflow: TextOverflow.ellipsis),
-                            const SizedBox(height: 5),
-                            Text(_formatDate(n['createdAt']),
-                              style: TextStyle(fontSize: 10, color: _slate.withOpacity(0.5),
-                                fontWeight: FontWeight.w500)),
-                          ])),
-                        ]),
-                      );
-                    },
-                  ),
-            ),
-            // ── Footer ───────────────────────────────────────────────────────
-            if (notifs.isNotEmpty)
+          child: Column(
+            children: [
               Container(
-                decoration: BoxDecoration(
-                  border: Border(top: BorderSide(color: _border)),
-                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
-                ),
-                child: TextButton(
-                  onPressed: () async {
-                    await _api.markAllNotificationsRead();
-                    if (mounted) {
-                      setState(() => _notificationCount = 0);
-                      Navigator.pop(context);
-                    }
-                  },
-                  style: TextButton.styleFrom(
-                    foregroundColor: _rose,
-                    minimumSize: const Size(double.infinity, 48),
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.vertical(bottom: Radius.circular(24))),
+                padding: const EdgeInsets.fromLTRB(20, 20, 12, 20),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [_rose, _violet],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                  child: const Text('Tout marquer comme lu',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.notifications_rounded,
+                        color: Colors.white, size: 22),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'Notifications',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700),
+                    ),
+                    const Spacer(),
+                    if (_notificationCount > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.white24,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '$_notificationCount non lues',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(
+                            color: Colors.white24, shape: BoxShape.circle),
+                        child: const Icon(Icons.close_rounded,
+                            color: Colors.white, size: 16),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-          ]),
+              Expanded(
+                child: notifs.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.all(40),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: _rose.withOpacity(0.06),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(Icons.notifications_off_outlined,
+                                  size: 40, color: _rose.withOpacity(0.4)),
+                            ),
+                            const SizedBox(height: 16),
+                            Text('Aucune notification',
+                                style: TextStyle(
+                                    color: _slate,
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w500)),
+                            const SizedBox(height: 6),
+                            Text('Vous êtes à jour !',
+                                style: TextStyle(
+                                    color: _slate.withOpacity(0.6),
+                                    fontSize: 13)),
+                          ],
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        itemCount: notifs.length,
+                        separatorBuilder: (_, __) => Divider(
+                            height: 1,
+                            color: _border,
+                            indent: 16,
+                            endIndent: 16),
+                        itemBuilder: (_, i) {
+                          final n = notifs[i];
+                          final bool lu = n['lu'] == true;
+                          final String type = n['type'] ?? 'info';
+                          final Color typeColor = type == 'service'
+                              ? const Color(0xFF10B981)
+                              : type == 'activite'
+                                  ? _violet
+                                  : _rose;
+                          final IconData typeIcon = type == 'service'
+                              ? Icons.celebration_rounded
+                              : type == 'activite'
+                                  ? Icons.flash_on_rounded
+                                  : Icons.campaign_rounded;
+
+                          return Container(
+                            color: lu
+                                ? Colors.transparent
+                                : _rose.withOpacity(0.025),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    color: typeColor.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(typeIcon,
+                                      color: typeColor, size: 20),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              n['titre'] ?? '',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: lu
+                                                    ? FontWeight.w400
+                                                    : FontWeight.w600,
+                                                color: _ink,
+                                              ),
+                                            ),
+                                          ),
+                                          if (!lu)
+                                            Container(
+                                              width: 7,
+                                              height: 7,
+                                              decoration: const BoxDecoration(
+                                                  color: _rose,
+                                                  shape: BoxShape.circle),
+                                            ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 3),
+                                      Text(
+                                        n['message'] ?? '',
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            color: _slate,
+                                            height: 1.4),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 5),
+                                      Text(
+                                        _formatDate(n['createdAt']),
+                                        style: TextStyle(
+                                            fontSize: 10,
+                                            color: _slate.withOpacity(0.5),
+                                            fontWeight: FontWeight.w500),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+              ),
+              if (notifs.isNotEmpty)
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border(top: BorderSide(color: _border)),
+                    borderRadius: const BorderRadius.vertical(
+                        bottom: Radius.circular(26)),
+                  ),
+                  child: TextButton(
+                    onPressed: () async {
+                      await _api.markAllNotificationsRead();
+                      if (mounted) {
+                        setState(() => _notificationCount = 0);
+                        Navigator.pop(context);
+                      }
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: _rose,
+                      minimumSize: const Size(double.infinity, 48),
+                      shape: const RoundedRectangleBorder(
+                        borderRadius: BorderRadius.vertical(
+                            bottom: Radius.circular(26)),
+                      ),
+                    ),
+                    child: const Text('Tout marquer comme lu',
+                        style: TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -392,29 +525,96 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     try {
       final d = DateTime.parse(dateStr).toLocal();
       final diff = DateTime.now().difference(d);
-      if (diff.inMinutes < 1) return 'A l\'instant';
+      if (diff.inMinutes < 1) return 'À l\'instant';
       if (diff.inMinutes < 60) return 'Il y a ${diff.inMinutes} min';
       if (diff.inHours < 24) return 'Il y a ${diff.inHours}h';
       return '${d.day}/${d.month}/${d.year}';
-    } catch (_) { return ''; }
+    } catch (_) {
+      return '';
+    }
   }
 
-  // ======================== BUILD ========================
   @override
   Widget build(BuildContext context) {
-    if (_error != null && _user == null && !_loadingUser) return _buildErrorScreen();
+    if (_error != null && _user == null && !_loadingUser) {
+      return _buildErrorScreen();
+    }
+
     return Scaffold(
       backgroundColor: _snow,
-      body: SafeArea(
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: Column(children: [
-            _buildHeader(),
-            _buildNavBar(),
-            Expanded(child: _buildCurrentPage()),
-          ]),
-        ),
+      body: Stack(
+        children: [
+          _buildPremiumBackground(),
+          SafeArea(
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: Column(
+                children: [
+                  _buildPremiumHeader(),
+                  _buildPremiumNavBar(),
+                  Expanded(child: _buildCurrentPage()),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildPremiumBackground() {
+    return Stack(
+      children: [
+        Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Color(0xFFFAF4EE),
+                Color(0xFFF8EFE7),
+                Color(0xFFFDF8F3),
+              ],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
+        ),
+        Positioned(
+          top: -60,
+          right: -40,
+          child: Container(
+            width: 180,
+            height: 180,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _rose.withOpacity(0.10),
+            ),
+          ),
+        ),
+        Positioned(
+          top: 120,
+          left: -50,
+          child: Container(
+            width: 140,
+            height: 140,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _violet.withOpacity(0.08),
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: 80,
+          right: -30,
+          child: Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: _gold.withOpacity(0.10),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -426,144 +626,406 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           color: _rose,
           backgroundColor: Colors.white,
           child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              WelcomeCard(user: _user, loading: _loadingUser),
-              const SizedBox(height: 20),
-              ProfileSection(user: _user,loading: _loadingUser,onProfileUpdated: _loadUser,),
-              const SizedBox(height: 20),
-              MoodSelector(selectedMood: _selectedMood, onMoodSelected: _onMoodSelected),
-              const SizedBox(height: 20),
-              DailyChallengeCard(challenge: _dailyChallenge, loading: _loadingChallenge, onJoin: _startDailyChallenge),
-              const SizedBox(height: 20),
-              RecommendedSection(
-                activities: _recommended, loading: _loadingRecommended,
-                onJoin: _joinActivity, onSeeAll: () => setState(() => _selectedNav = 1),
-              ),
-              const SizedBox(height: 20),
-              CommunityFeedSection(feed: _communityFeed, loading: _loadingFeed),
-              const SizedBox(height: 20),
-              ActivitiesSection(
-                activities: _allActivities, loading: _loadingAll,
-                categories: _categories, selectedCategory: _selectedCategory,
-                searchController: _searchController,
-                onSearchChanged: (q) { _searchQuery = q; _filterActivities(); },
-                onCategorySelected: (cat) { setState(() => _selectedCategory = cat); _filterActivities(); },
-                onJoin: _joinActivity,
-              ),
-              const SizedBox(height: 24),
-            ]),
+            physics: const AlwaysScrollableScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Une seule WelcomeCard avec le logo animé ──
+                _buildPremiumCard(
+                  child: WelcomeCard(user: _user, loading: _loadingUser),
+                ),
+                const SizedBox(height: 16),
+
+                _buildPremiumCard(
+                  child: ProfileSection(
+                    user: _user,
+                    loading: _loadingUser,
+                    onProfileUpdated: _loadUser,
+                  ),
+                ),
+                const SizedBox(height: 18),
+
+                _buildSectionTitle(
+                  "Bien-être du moment",
+                  "Choisis ton humeur et laisse WeJoy t'accompagner.",
+                  Icons.favorite_rounded,
+                  _rose,
+                ),
+                const SizedBox(height: 12),
+
+                _buildMoodHeroCard(),
+                const SizedBox(height: 18),
+
+                _buildSectionTitle(
+                  "Défi du jour",
+                  "Un petit pas aujourd'hui, un vrai progrès demain.",
+                  Icons.auto_awesome_rounded,
+                  _violet,
+                ),
+                const SizedBox(height: 12),
+
+                _buildPremiumCard(
+                  child: DailyChallengeCard(
+                    challenge: _dailyChallenge,
+                    loading: _loadingChallenge,
+                    onJoin: _startDailyChallenge,
+                  ),
+                ),
+                const SizedBox(height: 18),
+
+                _buildSectionTitle(
+                  "Recommandé pour toi",
+                  "Des activités choisies selon ton énergie et tes envies.",
+                  Icons.local_fire_department_rounded,
+                  _gold,
+                ),
+                const SizedBox(height: 12),
+
+                _buildPremiumCard(
+                  child: RecommendedSection(
+                    activities: _recommended,
+                    loading: _loadingRecommended,
+                    onJoin: _joinActivity,
+                    onSeeAll: () => setState(() => _selectedNav = 1),
+                  ),
+                ),
+                const SizedBox(height: 18),
+
+                _buildSectionTitle(
+                  "Communauté",
+                  "Découvre ce que les autres partagent et accomplissent.",
+                  Icons.groups_rounded,
+                  _violet,
+                ),
+                const SizedBox(height: 12),
+
+                _buildPremiumCard(
+                  child: CommunityFeedSection(
+                    feed: _communityFeed,
+                    loading: _loadingFeed,
+                  ),
+                ),
+                const SizedBox(height: 18),
+
+                _buildSectionTitle(
+                  "Explorer",
+                  "Recherche une activité qui te ressemble aujourd'hui.",
+                  Icons.explore_rounded,
+                  _rose,
+                ),
+                const SizedBox(height: 12),
+
+                _buildPremiumCard(
+                  child: ActivitiesSection(
+                    activities: _allActivities,
+                    loading: _loadingAll,
+                    categories: _categories,
+                    selectedCategory: _selectedCategory,
+                    searchController: _searchController,
+                    onSearchChanged: (q) {
+                      _searchQuery = q;
+                      _filterActivities();
+                    },
+                    onCategorySelected: (cat) {
+                      setState(() => _selectedCategory = cat);
+                      _filterActivities();
+                    },
+                    onJoin: _joinActivity,
+                  ),
+                ),
+                const SizedBox(height: 28),
+              ],
+            ),
           ),
         );
-      case 1: return const ActivitiePage();
-      case 2: return const DefisPage();
-      case 3: return const ChatPage();
-      case 4: return const TachesPage();
-      case 5: return const ProfilePage();
-      default: return const SizedBox();
+
+      case 1:
+        return const ActivitiePage();
+      case 2:
+        return const DefisPage();
+      case 3:
+        return const ChatPage();
+      case 4:
+        return const TachesPage();
+      case 5:
+        return const ProfilePage();
+      default:
+        return const SizedBox();
     }
   }
 
-  Widget _buildPlaceholder(String text, IconData icon, Color color) {
-    return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Container(
-        padding: const EdgeInsets.all(28),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
-          shape: BoxShape.circle,
-        ),
-        child: Icon(icon, size: 48, color: color.withOpacity(0.5)),
-      ),
-      const SizedBox(height: 16),
-      Text(text, style: TextStyle(color: _slate, fontSize: 15, fontWeight: FontWeight.w500)),
-      const SizedBox(height: 6),
-      Text('Disponible prochainement', style: TextStyle(color: _slate.withOpacity(0.5), fontSize: 13)),
-    ]));
-  }
-
-  // ── Header ────────────────────────────────────────────────────────────────
-  Widget _buildHeader() {
+  Widget _buildMoodHeroCard() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _card,
-        border: Border(bottom: BorderSide(color: _border, width: 1)),
+        gradient: const LinearGradient(
+          colors: [Colors.white, Color(0xFFFFF7F0)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: Colors.white.withOpacity(0.8)),
         boxShadow: [
-          BoxShadow(color: _ink.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 2)),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
+          ),
         ],
       ),
-      child: Row(children: [
-        // Logo
-        Container(
-          width: 38, height: 38,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [_rose, _violet],
-              begin: Alignment.topLeft, end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(11),
-            boxShadow: [BoxShadow(color: _rose.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 3))],
-          ),
-          child: const Center(child: Text('WJ',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14, letterSpacing: 0.5))),
-        ),
-        const SizedBox(width: 10),
-        ShaderMask(
-          shaderCallback: (b) => const LinearGradient(colors: [_rose, _violet]).createShader(b),
-          child: const Text('WeJoy', style: TextStyle(
-            fontSize: 20, fontWeight: FontWeight.w800,
-            color: Colors.white, letterSpacing: -0.5,
-          )),
-        ),
-        const Spacer(),
-        // Cloche
-        Stack(children: [
-          _headerBtn(Icons.notifications_outlined, () => _showNotifications()),
-          if (_notificationCount > 0)
-            Positioned(
-              top: 6, right: 6,
-              child: Container(
-                width: 16, height: 16,
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
                 decoration: BoxDecoration(
-                  color: _rose,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: _card, width: 1.5),
+                  color: _peach,
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                child: Center(child: Text('$_notificationCount',
-                  style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700))),
+                child: const Icon(Icons.auto_awesome_rounded,
+                    color: _rose, size: 22),
               ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  "Ton bien-être compte aujourd'hui ❤️",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: _ink,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              "Prends un moment pour te reconnecter à toi-même.",
+              style: TextStyle(fontSize: 13, color: _slate, height: 1.4),
             ),
-        ]),
-        const SizedBox(width: 4),
-        // Logout
-        _headerBtn(Icons.logout_rounded, () async {
-          await _api.logout();
-          if (mounted) Navigator.pushReplacementNamed(context, '/login');
-        }),
-      ]),
+          ),
+          const SizedBox(height: 16),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 400),
+            child: MoodSelector(
+              key: ValueKey(_selectedMood),
+              selectedMood: _selectedMood,
+              onMoodSelected: _onMoodSelected,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _headerBtn(IconData icon, VoidCallback onTap) {
+  Widget _buildSectionTitle(
+      String title, String subtitle, IconData icon, Color accent) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            color: accent.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Icon(icon, color: accent, size: 21),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: _ink)),
+              const SizedBox(height: 3),
+              Text(subtitle,
+                  style: TextStyle(
+                      fontSize: 12.5, color: _slate, height: 1.35)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPremiumCard({required Widget child}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.78),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: Colors.white.withOpacity(0.8)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: Container(color: Colors.white, child: child),
+      ),
+    );
+  }
+
+  Widget _buildPremiumHeader() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.92),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withOpacity(0.7)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [_rose, _violet],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: _rose.withOpacity(0.28),
+                  blurRadius: 14,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: const Center(
+              child: Text('WJ',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
+                      letterSpacing: 0.4)),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ShaderMask(
+                  shaderCallback: (bounds) => const LinearGradient(
+                    colors: [_rose, _violet],
+                  ).createShader(bounds),
+                  child: const Text('WeJoy',
+                      style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: -0.4)),
+                ),
+                Text("Une pause bien-être dans ta journée",
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: _slate,
+                        fontWeight: FontWeight.w500)),
+              ],
+            ),
+          ),
+          Stack(
+            children: [
+              _premiumHeaderBtn(
+                  icon: Icons.notifications_rounded,
+                  onTap: _showNotifications),
+              if (_notificationCount > 0)
+                Positioned(
+                  top: 2,
+                  right: 2,
+                  child: Container(
+                    width: 18,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      color: _rose,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: Center(
+                      child: Text('$_notificationCount',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800)),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(width: 8),
+          _premiumHeaderBtn(
+            icon: Icons.logout_rounded,
+            onTap: () async {
+              await _api.logout();
+              if (mounted) Navigator.pushReplacementNamed(context, '/login');
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _premiumHeaderBtn(
+      {required IconData icon, required VoidCallback onTap}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 38, height: 38,
+        width: 42,
+        height: 42,
         decoration: BoxDecoration(
-          color: _snow,
-          borderRadius: BorderRadius.circular(11),
+          color: const Color(0xFFFFFBF7),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(color: _border),
         ),
-        child: Icon(icon, size: 18, color: _slate),
+        child: Icon(icon, color: _slate, size: 20),
       ),
     );
   }
 
-  // ── NavBar ────────────────────────────────────────────────────────────────
-  Widget _buildNavBar() {
+  Widget _buildPremiumNavBar() {
     return Container(
-      color: _card,
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.92),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.white.withOpacity(0.7)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
       child: Row(
         children: List.generate(_navItems.length, (i) {
           final sel = _selectedNav == i;
@@ -572,34 +1034,40 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               onTap: () => setState(() => _selectedNav = i),
               behavior: HitTestBehavior.opaque,
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(vertical: 10),
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                padding:
+                    const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
                 decoration: BoxDecoration(
-                  border: Border(bottom: BorderSide(
-                    color: sel ? _rose : Colors.transparent, width: 2,
-                  )),
+                  gradient: sel
+                      ? LinearGradient(colors: [
+                          _rose.withOpacity(0.12),
+                          _violet.withOpacity(0.10),
+                        ])
+                      : null,
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: EdgeInsets.all(sel ? 6 : 0),
-                    decoration: BoxDecoration(
-                      color: sel ? _rose.withOpacity(0.1) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(8),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _navItems[i]['icon'] as IconData,
+                      size: 20,
+                      color: sel ? _rose : _slate.withOpacity(0.75),
                     ),
-                    child: Icon(
-                      _navItems[i]['icon'] as IconData, size: 20,
-                      color: sel ? _rose : _slate.withOpacity(0.6),
+                    const SizedBox(height: 4),
+                    Text(
+                      _navItems[i]['label'] as String,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 9.5,
+                        fontWeight:
+                            sel ? FontWeight.w800 : FontWeight.w500,
+                        color: sel ? _rose : _slate.withOpacity(0.75),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(_navItems[i]['label'] as String, style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: sel ? FontWeight.w700 : FontWeight.w400,
-                    color: sel ? _rose : _slate.withOpacity(0.6),
-                    letterSpacing: sel ? 0.3 : 0,
-                  )),
-                ]),
+                  ],
+                ),
               ),
             ),
           );
@@ -608,43 +1076,69 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  // ── Error screen ─────────────────────────────────────────────────────────
   Widget _buildErrorScreen() {
     return Scaffold(
       backgroundColor: _snow,
-      body: Center(child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEF4444).withOpacity(0.08),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.wifi_off_rounded, size: 48, color: Color(0xFFEF4444)),
-          ),
-          const SizedBox(height: 24),
-          Text('Connexion impossible', style: TextStyle(
-            fontSize: 18, fontWeight: FontWeight.w700, color: _ink)),
-          const SizedBox(height: 8),
-          Text(_error ?? 'Impossible de charger les donnees',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: _slate, fontSize: 13, height: 1.5)),
-          const SizedBox(height: 28),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () { setState(() => _error = null); _loadData(); },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _rose, foregroundColor: Colors.white,
-                elevation: 0, padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEF4444).withOpacity(0.08),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.wifi_off_rounded,
+                    size: 48, color: Color(0xFFEF4444)),
               ),
-              child: const Text('Reessayer', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-            ),
+              const SizedBox(height: 24),
+              Text('Connexion impossible',
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: _ink)),
+              const SizedBox(height: 8),
+              Text(
+                _error ?? 'Impossible de charger les données',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: _slate, fontSize: 13, height: 1.5),
+              ),
+              const SizedBox(height: 28),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    setState(() => _error = null);
+                    _loadData();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _rose,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: const Text('Réessayer',
+                      style: TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 15)),
+                ),
+              ),
+            ],
           ),
-        ]),
-      )),
+        ),
+      ),
     );
   }
+}
+
+extension on UserProfile? {
+  get fullName => null;
+}
+
+extension _FirstOrNullExtension<E> on List<E> {
+  E? get firstOrNull => isEmpty ? null : first;
 }

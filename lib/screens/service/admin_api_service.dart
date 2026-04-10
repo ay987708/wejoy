@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class AdminApiService extends ChangeNotifier {
   // Change this to your server IP/domain
-  static const String baseUrl = 'http://localhost:5001/api';
+  static const String baseUrl = 'http://localhost:5000/api';
 
   String? _token;
   Map<String, dynamic>? _admin;

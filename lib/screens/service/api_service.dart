@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 
-const String baseUrl = 'http://localhost:5001';
+const String baseUrl = 'http://localhost:5000';
 
 // ✅ Configuration automatique selon la plateforme
 
