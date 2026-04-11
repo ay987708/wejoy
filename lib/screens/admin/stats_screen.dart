@@ -384,51 +384,91 @@ class _BarPainter extends CustomPainter {
   @override bool shouldRepaint(covariant _BarPainter old) => old.progress != progress;
 }
 
-// ── Grouped Bar Chart (hebdo) ─────────────────────────────────
 class _GroupedBarPainter extends CustomPainter {
   final List data;
   final double progress;
   _GroupedBarPainter(this.data, this.progress);
 
+  double safe(num? v) {
+    final val = (v ?? 0).toDouble();
+    if (val.isNaN || val.isInfinite) return 0;
+    return val;
+  }
+
+  double safeDiv(num a, num b) {
+    if (b == 0) return 0;
+    final res = a / b;
+    if (res.isNaN || res.isInfinite) return 0;
+    return res.toDouble();
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
     if (data.isEmpty) return;
-    final allVals = data.expand((d) => [(d['activites'] as num).toDouble(), (d['participants'] as num).toDouble()]);
-    final maxVal = allVals.reduce(max) * 1.2;
+
+    final allVals = data.expand((d) => [
+      safe(d['activites']),
+      safe(d['participants'])
+    ]);
+
+    double maxVal = allVals.isEmpty ? 1 : allVals.reduce(max);
+    if (maxVal <= 0) maxVal = 1; // 🔥 IMPORTANT
+
     final padL = 10.0, padB = 28.0, padT = 10.0, padR = 10.0;
     final w = size.width - padL - padR;
     final h = size.height - padB - padT;
+
     final groupW = w / data.length;
     final barW   = groupW * 0.3;
 
     for (int i = 0; i < data.length; i++) {
       final groupX = padL + groupW * i;
 
-      // Bar 1 — activités (violet)
-      final h1 = (h * (data[i]['activites'] as num) / maxVal) * progress;
+      // 🔹 Activités
+      final val1 = safe(data[i]['activites']);
+      final h1 = h * safeDiv(val1, maxVal) * progress;
+
       final x1 = groupX + groupW * 0.1;
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(Rect.fromLTWH(x1, padT + h - h1, barW, h1), const Radius.circular(4)),
-        Paint()..color = const Color(0xFFA855F7).withOpacity(0.85),
-      );
 
-      // Bar 2 — participants (rose)
-      final h2 = (h * (data[i]['participants'] as num) / maxVal) * progress;
+      if (h1 > 0) {
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(x1, padT + h - h1, barW, h1),
+            const Radius.circular(4),
+          ),
+          Paint()..color = const Color(0xFFA855F7).withOpacity(0.85),
+        );
+      }
+
+      // 🔹 Participants
+      final val2 = safe(data[i]['participants']);
+      final h2 = h * safeDiv(val2, maxVal) * progress;
+
       final x2 = x1 + barW + 3;
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(Rect.fromLTWH(x2, padT + h - h2, barW, h2), const Radius.circular(4)),
-        Paint()..color = const Color(0xFFEC4899).withOpacity(0.85),
-      );
 
-      // Jour label
+      if (h2 > 0) {
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(x2, padT + h - h2, barW, h2),
+            const Radius.circular(4),
+          ),
+          Paint()..color = const Color(0xFFEC4899).withOpacity(0.85),
+        );
+      }
+
+      // label jour
       final tp = TextPainter(
-        text: TextSpan(text: data[i]['jour'], style: TextStyle(fontSize: 10, color: Colors.grey[500])),
+        text: TextSpan(
+          text: data[i]['jour'] ?? '',
+          style: TextStyle(fontSize: 10, color: Colors.grey[500]),
+        ),
         textDirection: TextDirection.ltr,
       )..layout();
+
       tp.paint(canvas, Offset(groupX + groupW / 2 - tp.width / 2, padT + h + 6));
     }
 
-    // Légende
+    // légende
     _legend(canvas, size, 'Activités', const Color(0xFFA855F7), size.width - 200);
     _legend(canvas, size, 'Participants', const Color(0xFFEC4899), size.width - 110);
   }
@@ -442,5 +482,6 @@ class _GroupedBarPainter extends CustomPainter {
     tp.paint(canvas, Offset(x + 9, 2));
   }
 
-  @override bool shouldRepaint(covariant _GroupedBarPainter old) => old.progress != progress;
+  @override
+  bool shouldRepaint(covariant _GroupedBarPainter old) => old.progress != progress;
 }
