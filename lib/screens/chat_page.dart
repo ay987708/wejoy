@@ -51,7 +51,7 @@ class _ChatPageState extends State<ChatPage> {
         text:
             'Salut ${widget.user?.username ?? ''} ! 😊\n\n'
             'Je suis Joya, ton assistant bien-être 💜\n\n'
-            'Je suis là pour t’aider à améliorer ta santé, ton humeur et ton quotidien. '
+            'Je suis là pour t\'aider à améliorer ta santé, ton humeur et ton quotidien. '
             'On commence quand tu veux 🌟',
         isUser: false,
       ),
@@ -114,11 +114,10 @@ class _ChatPageState extends State<ChatPage> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-
         setState(() {
           _messages.add(
             ChatMessage(
-              text: data['reply'] ?? 'Je n’ai pas pu générer une réponse.',
+              text: data['reply'] ?? 'Je n\'ai pas pu générer une réponse.',
               isUser: false,
             ),
           );
@@ -149,7 +148,7 @@ class _ChatPageState extends State<ChatPage> {
       _messages.add(
         ChatMessage(
           text:
-              'Conversation réinitialisée ✨\n\nJe suis prête à t’aider à nouveau.',
+              'Conversation réinitialisée ✨\n\nJe suis prête à t\'aider à nouveau.',
           isUser: false,
         ),
       );
@@ -180,24 +179,14 @@ class _ChatPageState extends State<ChatPage> {
         spans.add(
           TextSpan(
             text: m.group(1),
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              color: boldColor,
-            ),
+            style: TextStyle(fontWeight: FontWeight.w700, color: boldColor),
           ),
         );
         return '';
       },
       onNonMatch: (s) {
         if (s.isNotEmpty) {
-          spans.add(
-            TextSpan(
-              text: s,
-              style: TextStyle(
-                color: baseColor,
-              ),
-            ),
-          );
+          spans.add(TextSpan(text: s, style: TextStyle(color: baseColor)));
         }
         return '';
       },
@@ -205,10 +194,7 @@ class _ChatPageState extends State<ChatPage> {
 
     return RichText(
       text: TextSpan(
-        style: const TextStyle(
-          fontSize: 14.5,
-          height: 1.6,
-        ),
+        style: const TextStyle(fontSize: 14.5, height: 1.6),
         children: spans,
       ),
     );
@@ -224,14 +210,9 @@ class _ChatPageState extends State<ChatPage> {
           decoration: BoxDecoration(
             color: const Color(0xFFF3F4F6),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: const Color(0xFFE5E7EB),
-            ),
+            border: Border.all(color: const Color(0xFFE5E7EB)),
           ),
-          child: Text(
-            emoji,
-            style: const TextStyle(fontSize: 12),
-          ),
+          child: Text(emoji, style: const TextStyle(fontSize: 12)),
         ),
       ),
     );
@@ -245,9 +226,7 @@ class _ChatPageState extends State<ChatPage> {
         decoration: BoxDecoration(
           color: const Color(0xFFD63FBF).withOpacity(0.08),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: const Color(0xFFD63FBF).withOpacity(0.25),
-          ),
+          border: Border.all(color: const Color(0xFFD63FBF).withOpacity(0.25)),
         ),
         child: Text(
           text,
@@ -271,95 +250,89 @@ class _ChatPageState extends State<ChatPage> {
             isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
+          // ── Avatar Joya : 36×36 au lieu de 150×150 ──
           if (!isUser) ...[
-            Container(
-              width: 34,
-              height: 34,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFFE94057), Color(0xFF8A2BE2)],
-                ),
-                shape: BoxShape.circle,
-              ),
-              child: const Center(
-                child: Text(
-                  '🤖',
-                  style: TextStyle(fontSize: 16),
+            SizedBox(
+              width: 70,
+              height: 70,
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/images/joyaai.png',
+                  fit: BoxFit.cover,
                 ),
               ),
             ),
             const SizedBox(width: 8),
           ],
+          // ── Bulle limitée en largeur ──
           Flexible(
-            child: Column(
-              crossAxisAlignment:
-                  isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: isUser
-                        ? const LinearGradient(
-                            colors: [Color(0xFFE94057), Color(0xFF8A2BE2)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          )
-                        : null,
-                    color: isUser ? null : Colors.white,
-                    borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(20),
-                      topRight: const Radius.circular(20),
-                      bottomLeft:
-                          Radius.circular(isUser ? 20 : 6),
-                      bottomRight:
-                          Radius.circular(isUser ? 6 : 20),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 280),
+              child: Column(
+                crossAxisAlignment:
+                    isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.06),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
+                    decoration: BoxDecoration(
+                      gradient: isUser
+                          ? const LinearGradient(
+                              colors: [Color(0xFFE94057), Color(0xFF8A2BE2)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
+                          : null,
+                      color: isUser ? null : Colors.white,
+                      borderRadius: BorderRadius.only(
+                        topLeft: const Radius.circular(20),
+                        topRight: const Radius.circular(20),
+                        bottomLeft: Radius.circular(isUser ? 20 : 6),
+                        bottomRight: Radius.circular(isUser ? 6 : 20),
                       ),
-                    ],
-                    border: isUser
-                        ? null
-                        : Border.all(
-                            color: const Color(0xFFF1F5F9),
-                          ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildFormattedText(message.text, isUser),
-                      const SizedBox(height: 6),
-                      Text(
-                        '${message.time.hour.toString().padLeft(2, '0')}:${message.time.minute.toString().padLeft(2, '0')}',
-                        style: TextStyle(
-                          fontSize: 10.5,
-                          color: isUser
-                              ? Colors.white70
-                              : Colors.grey[500],
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.06),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
                         ),
-                      ),
-                    ],
+                      ],
+                      border: isUser
+                          ? null
+                          : Border.all(color: const Color(0xFFF1F5F9)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildFormattedText(message.text, isUser),
+                        const SizedBox(height: 6),
+                        Text(
+                          '${message.time.hour.toString().padLeft(2, '0')}:${message.time.minute.toString().padLeft(2, '0')}',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            color: isUser ? Colors.white70 : Colors.grey[500],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                if (!isUser) ...[
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      _reactionButton('👍'),
-                      _reactionButton('💜'),
-                      _reactionButton('🔥'),
-                    ],
-                  ),
+                  if (!isUser) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        _reactionButton('👍'),
+                        _reactionButton('💜'),
+                        _reactionButton('🔥'),
+                      ],
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
+          // ── Avatar utilisateur ──
           if (isUser) ...[
             const SizedBox(width: 8),
             Container(
@@ -368,9 +341,7 @@ class _ChatPageState extends State<ChatPage> {
               decoration: BoxDecoration(
                 color: const Color(0xFFF3F4F6),
                 shape: BoxShape.circle,
-                border: Border.all(
-                  color: const Color(0xFFE5E7EB),
-                ),
+                border: Border.all(color: const Color(0xFFE5E7EB)),
               ),
               child: Center(
                 child: Text(
@@ -393,19 +364,14 @@ class _ChatPageState extends State<ChatPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFFE94057), Color(0xFF8A2BE2)],
-              ),
-              shape: BoxShape.circle,
-            ),
-            child: const Center(
-              child: Text(
-                '🤖',
-                style: TextStyle(fontSize: 16),
+          // ── Avatar Joya dans le typing indicator : 36×36 ──
+          SizedBox(
+            width: 70,
+            height: 70,
+            child: ClipOval(
+              child: Image.asset(
+                'assets/images/joyaai.png',
+                fit: BoxFit.cover,
               ),
             ),
           ),
@@ -427,13 +393,11 @@ class _ChatPageState extends State<ChatPage> {
                   offset: const Offset(0, 4),
                 ),
               ],
-              border: Border.all(
-                color: const Color(0xFFF1F5F9),
-              ),
+              border: Border.all(color: const Color(0xFFF1F5F9)),
             ),
-            child: Row(
+            child: const Row(
               mainAxisSize: MainAxisSize.min,
-              children: const [
+              children: [
                 _TypingDot(delay: 0),
                 SizedBox(width: 4),
                 _TypingDot(delay: 200),
@@ -470,9 +434,7 @@ class _ChatPageState extends State<ChatPage> {
                 decoration: BoxDecoration(
                   color: const Color(0xFFF8FAFC),
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                    color: const Color(0xFFE5E7EB),
-                  ),
+                  border: Border.all(color: const Color(0xFFE5E7EB)),
                 ),
                 child: TextField(
                   controller: _controller,
@@ -537,7 +499,7 @@ class _ChatPageState extends State<ChatPage> {
 
   Widget _buildSuggestionsBar() {
     return Container(
-      height: 52,
+      height: 50,
       color: Colors.white,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
@@ -558,35 +520,26 @@ class _ChatPageState extends State<ChatPage> {
         foregroundColor: const Color(0xFF111827),
         elevation: 0,
         scrolledUnderElevation: 0,
-        titleSpacing: 16,
+        // ── titleSpacing corrigé : 0 au lieu de -50 ──
+        titleSpacing: 0,
         title: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFE94057), Color(0xFF8A2BE2)],
-                ),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF8A2BE2).withOpacity(0.20),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: const Center(
-                child: Text(
-                  '🤖',
-                  style: TextStyle(fontSize: 20),
+            // ── Avatar AppBar : 38×38 au lieu de 150×150 ──
+            SizedBox(
+              width: 70,
+              height: 70,
+              child: ClipOval(
+                child: Image.asset(
+                  'assets/images/joyaai.png',
+                  fit: BoxFit.cover,
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 const Text(
                   'Joya',
@@ -674,16 +627,11 @@ class _TypingDotState extends State<_TypingDot>
       vsync: this,
     );
     _anim = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(
-        parent: _ctrl,
-        curve: Curves.easeInOut,
-      ),
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
     );
 
     Future.delayed(Duration(milliseconds: widget.delay), () {
-      if (mounted) {
-        _ctrl.repeat(reverse: true);
-      }
+      if (mounted) _ctrl.repeat(reverse: true);
     });
   }
 

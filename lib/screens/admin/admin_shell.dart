@@ -5,7 +5,6 @@ import 'package:wejoy/screens/admin/admin_activities_screens.dart';
 import 'package:wejoy/screens/service/admin_api_service.dart';
 import 'dashboard_screen.dart';
 import 'users_screen.dart';
-import 'services_screen.dart';
 import 'demandes_screen.dart';
 import 'notifications_screen.dart';
 import 'stats_screen.dart';
@@ -23,7 +22,6 @@ class _AdminShellState extends State<AdminShell> {
   final List<_NavItem> _navItems = [
     _NavItem(icon: Icons.bar_chart_rounded,           label: 'Vue d\'ensemble'),
     _NavItem(icon: Icons.group_outlined,              label: 'Utilisateurs'),
-    _NavItem(icon: Icons.calendar_today_outlined,     label: 'Services'),
     _NavItem(icon: Icons.chat_bubble_outline_rounded, label: 'Demandes'),
     _NavItem(icon: Icons.notifications_outlined,      label: 'Notifications'),
     _NavItem(icon: Icons.show_chart_rounded,          label: 'Statistiques'),
@@ -33,7 +31,6 @@ class _AdminShellState extends State<AdminShell> {
   final List<Widget> _screens = [
     const DashboardScreen(),
     const UsersScreen(),
-    const ServicesScreen(),
     const DemandesScreen(),
     const NotificationsScreen(),
     const StatsScreen(),

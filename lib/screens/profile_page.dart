@@ -285,15 +285,20 @@ class _ProfilePageState extends State<ProfilePage>
     focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _rose, width: 2)));
 
   @override
-  Widget build(BuildContext context) {
-    if (_loading) return _buildSkeleton();
+  @override
+Widget build(BuildContext context) {
+if (_loading) {
+  return CustomScrollView(
+    slivers: [
+      SliverToBoxAdapter(child: _buildSkeleton()),
+    ],
+  );
+}
 
-    return Scaffold(
-      backgroundColor: _snow,
-      body: RefreshIndicator(
-        onRefresh: _load,
-        color: _rose,
-        child: CustomScrollView(
+  return RefreshIndicator(
+    onRefresh: _load,
+    color: _rose,
+    child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
           slivers: [
             SliverAppBar(
@@ -317,29 +322,26 @@ class _ProfilePageState extends State<ProfilePage>
               ),
             ),
            SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: SingleChildScrollView(          // <<⃣ AJOUT ICI
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildStats(),
-                  const SizedBox(height: 30),
-                  _buildInterests(),
-                  const SizedBox(height: 30),
-                  _buildMyActivities(),
-                  const SizedBox(height: 30),
-                  _buildSettings(),
-                  const SizedBox(height: 42),
-                   ],
-                  ),
-                ),                                      // <<⃣ FIN AJOUT
-              ),
-            ),
+  child: Padding(
+    padding: const EdgeInsets.all(20),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildStats(),
+        const SizedBox(height: 30),
+        _buildInterests(),
+        const SizedBox(height: 30),
+        _buildMyActivities(),
+        const SizedBox(height: 30),
+        _buildSettings(),
+        const SizedBox(height: 42),
+      ],
+    ),
+  ),
+),
           ],
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildHeroHeader() {
@@ -621,23 +623,35 @@ class _ProfilePageState extends State<ProfilePage>
         child,
       ]));
   }
-
-  Widget _buildSkeleton() {
-    return Scaffold(
-      backgroundColor: _snow,
-      body: Column(children: [
-        Container(height: 220,
+Widget _buildSkeleton() {
+  return SingleChildScrollView(
+    child: Column(
+      children: [
+        Container(
+          height: 220,
           decoration: const BoxDecoration(
-            gradient: LinearGradient(colors: [_rose, _violet], begin: Alignment.topLeft, end: Alignment.bottomRight))),
+            gradient: LinearGradient(
+              colors: [_rose, _violet],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         const SizedBox(height: 20),
-        Padding(padding: const EdgeInsets.symmetric(horizontal: 20), child: Column(children: [
-          _skeletonBox(height: 100, radius: 20),
-          const SizedBox(height: 16),
-          _skeletonBox(height: 120, radius: 20),
-        ])),
-      ]),
-    );
-  }
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            children: [
+              _skeletonBox(height: 100, radius: 20),
+              const SizedBox(height: 16),
+              _skeletonBox(height: 120, radius: 20),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _skeletonBox({required double height, double radius = 12}) {
     return Container(

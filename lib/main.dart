@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:wejoy/screens/activitie_page.dart';
 import 'package:wejoy/screens/service/admin_api_service.dart';
 import 'package:wejoy/screens/splash_screen.dart';
 import 'package:wejoy/screens/login_page.dart';
 import 'package:wejoy/screens/home_page.dart';
-import 'package:wejoy/screens/activity_detail_page.dart';
+
 import 'package:wejoy/screens/admin/admin_shell.dart';
 
 void main() {

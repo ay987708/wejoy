@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:wejoy/screens/activitie_page.dart';
 import 'package:wejoy/screens/service/api_service.dart';
 
 class ActivityCard extends StatelessWidget {
@@ -11,7 +12,14 @@ class ActivityCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        Navigator.pushNamed(context, '/activity-detail', arguments: activity);
+        Navigator.push(
+  context,
+  MaterialPageRoute(
+    builder: (_) => ActivityDetailPage(
+      activityId: activity.id.toString(),
+    ),
+  ),
+);
       },
       child: Container(
         width: 200,

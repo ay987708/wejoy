@@ -719,18 +719,6 @@ class _CreateActivityDialogState extends State<_CreateActivityDialog> {
               ])),
               const SizedBox(width: 12),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                _label('Type'),
-                DropdownButtonFormField<String>(
-                  value: _type,
-                  decoration: _inputDeco('Type'),
-                  items: [
-                    DropdownMenuItem(value: 'individual',
-                      child: Text('Individuel', style: GoogleFonts.poppins(fontSize: 13))),
-                    DropdownMenuItem(value: 'collective',
-                      child: Text('Collectif',  style: GoogleFonts.poppins(fontSize: 13))),
-                  ],
-                  onChanged: (v) => setState(() => _type = v!),
-                ),
               ])),
             ]),
             const SizedBox(height: 12),
@@ -801,7 +789,6 @@ class _CreateActivityDialogState extends State<_CreateActivityDialog> {
                     'description':     _descCtrl.text.trim(),
                     'imageUrl':        _imageCtrl.text.trim(),
                     'category':        _category,
-                    'type':            _type,
                     'isDaily':         _isDaily,
                     'isOfficial':      true,
                     'date':            _dateCtrl.text.trim().isNotEmpty ? _dateCtrl.text.trim() : null,
