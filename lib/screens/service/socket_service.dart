@@ -7,8 +7,7 @@ class SocketService {
 
   IO.Socket? socket;
 
-  // ⚠️ Pour Flutter Web → utilise POLLING en premier
-  // Pour téléphone réel → remplace localhost par l'IP du PC
+
   static const String serverUrl = 'http://localhost:5000';
 
   void connect() {
@@ -41,6 +40,9 @@ class SocketService {
     socket!.onError((data) {
       print('❌ Erreur socket: $data');
     });
+  }
+ void emit(String event, [dynamic data]) {
+    socket?.emit(event, data);
   }
 
   void createRoom() {
