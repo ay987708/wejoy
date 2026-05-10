@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
-const String _base = 'http://localhost:5000';
+const String _baseUrl = 'http://10.0.2.2:5000';
 
 // ════════════════════════════════════════════════════════════════════════════
 // ADMIN ACTIVITIES SCREEN
@@ -59,7 +59,7 @@ class _AdminActivitiesScreenState extends State<AdminActivitiesScreen>
       final token = await _getToken();
       if (token == null) { setState(() => _loading = false); return; }
       final res = await http.get(
-        Uri.parse('$_base/api/activities'),
+        Uri.parse('$_baseUrl/api/activities'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (res.statusCode == 200) {
@@ -74,7 +74,7 @@ class _AdminActivitiesScreenState extends State<AdminActivitiesScreen>
     try {
       final token = await _getToken();
       final res = await http.post(
-        Uri.parse('$_base/api/activities'),
+        Uri.parse('$_baseUrl/api/activities'),
         headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
         body: jsonEncode(body),
       );
@@ -137,7 +137,7 @@ class _AdminActivitiesScreenState extends State<AdminActivitiesScreen>
     try {
       final token = await _getToken();
       final res = await http.delete(
-        Uri.parse('$_base/api/activities/$id'),
+        Uri.parse('$_baseUrl/api/activities/$id'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (res.statusCode == 200) {
@@ -160,7 +160,7 @@ class _AdminActivitiesScreenState extends State<AdminActivitiesScreen>
     try {
       final token = await _getToken();
       final res = await http.put(
-        Uri.parse('$_base/api/activities/${activity['_id']}'),
+        Uri.parse('$_baseUrl/api/activities/${activity['_id']}'),
         headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
         body: jsonEncode(result),
       );
@@ -180,7 +180,7 @@ class _AdminActivitiesScreenState extends State<AdminActivitiesScreen>
     try {
       final token = await _getToken();
       await http.put(
-        Uri.parse('$_base/api/activities/${activity['_id']}'),
+        Uri.parse('$_baseUrl/api/activities/${activity['_id']}'),
         headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
         body: jsonEncode({'isOfficial': newValue}),
       );

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 
-const String _serverUrl = 'http://localhost:5000';
-
+const String _baseUrl = 'http://10.0.2.2:5000';
 // ══════════════════════════════════════════════════════════════
 // PAGE PRINCIPALE
 // ══════════════════════════════════════════════════════════════
@@ -298,7 +297,7 @@ class _GameLobbyPageState extends State<GameLobbyPage> with SingleTickerProvider
   }
 
   void _connect() {
-    socket = IO.io(_serverUrl, IO.OptionBuilder()
+    socket = IO.io(_baseUrl, IO.OptionBuilder()
         .setTransports(['websocket', 'polling'])
         .disableAutoConnect()
         .enableReconnection()

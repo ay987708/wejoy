@@ -2,8 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-
-const String baseUrl = 'http://localhost:5000';
+const String _baseUrl = 'http://10.0.2.2:5000';
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
@@ -82,7 +81,7 @@ class ApiService {
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/auth/login'),
+        Uri.parse('$_baseUrl/api/auth/login'),
         headers: await _headers(auth: false),
         body: jsonEncode({'email': email, 'password': password}),
       ).timeout(const Duration(seconds: 10));
@@ -100,7 +99,7 @@ class ApiService {
     required String password,
   }) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/api/auth/register'),
+      Uri.parse('$_baseUrl/api/auth/register'),
       headers: await _headers(auth: false),
       body: jsonEncode({'username': username, 'email': email, 'password': password}),
     );
@@ -109,7 +108,7 @@ class ApiService {
 
   Future<void> logout() async {
     try {
-      await http.post(Uri.parse('$baseUrl/api/auth/logout'), headers: await _headers());
+      await http.post(Uri.parse('$_baseUrl/api/auth/logout'), headers: await _headers());
     } finally {
       await clearToken();
     }
@@ -119,7 +118,7 @@ class ApiService {
   Future<Map<String, dynamic>> forgotPassword(String email) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/auth/forgot-password'),
+        Uri.parse('$_baseUrl/api/auth/forgot-password'),
         headers: await _headers(auth: false),
         body: jsonEncode({'email': email}),
       ).timeout(const Duration(seconds: 10));
@@ -141,7 +140,7 @@ class ApiService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/auth/reset-password'),
+        Uri.parse('$_baseUrl/api/auth/reset-password'),
         headers: await _headers(auth: false),
         body: jsonEncode({
           'email': email,
@@ -168,7 +167,7 @@ class ApiService {
       final token = await getToken();
       if (token == null) return null;
       final response = await http.get(
-        Uri.parse('$baseUrl/api/users/me'),
+        Uri.parse('$_baseUrl/api/users/me'),
         headers: await _headers(),
       );
       if (response.statusCode == 200) return UserProfile.fromJson(jsonDecode(response.body));
@@ -179,7 +178,7 @@ class ApiService {
 
   Future<UserProfile> updateProfile(Map<String, dynamic> data) async {
     final response = await http.put(
-      Uri.parse('$baseUrl/api/users/me'),
+      Uri.parse('$_baseUrl/api/users/me'),
       headers: await _headers(),
       body: jsonEncode(data),
     );
@@ -191,7 +190,7 @@ class ApiService {
   Future<List<Activity>> getRecommendedActivities() async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/activities/recommended'),
+        Uri.parse('$_baseUrl/api/activities/recommended'),
         headers: await _headers(),
       );
       final List data = _handleResponse(response);
@@ -204,7 +203,7 @@ class ApiService {
       final params = <String, String>{};
       if (category != null && category != 'Tous') params['category'] = category;
       if (search != null && search.isNotEmpty) params['search'] = search;
-      final uri = Uri.parse('$baseUrl/api/activities')
+      final uri = Uri.parse('$_baseUrl/api/activities')
           .replace(queryParameters: params.isEmpty ? null : params);
       final response = await http.get(uri, headers: await _headers());
       final List data = _handleResponse(response);
@@ -214,7 +213,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> createActivity(Map<String, dynamic> data) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/api/activities'),
+      Uri.parse('$_baseUrl/api/activities'),
       headers: await _headers(),
       body: jsonEncode(data),
     );
@@ -223,7 +222,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> updateActivity(String id, Map<String, dynamic> data) async {
     final response = await http.put(
-      Uri.parse('$baseUrl/api/activities/$id'),
+      Uri.parse('$_baseUrl/api/activities/$id'),
       headers: await _headers(),
       body: jsonEncode(data),
     );
@@ -232,7 +231,7 @@ class ApiService {
 
   Future<void> deleteActivity(String id) async {
     final response = await http.delete(
-      Uri.parse('$baseUrl/api/activities/$id'),
+      Uri.parse('$_baseUrl/api/activities/$id'),
       headers: await _headers(),
     );
     _handleResponse(response);
@@ -240,7 +239,7 @@ class ApiService {
 
   Future<void> joinActivity(String activityId) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/api/activities/$activityId/join'),
+      Uri.parse('$_baseUrl/api/activities/$activityId/join'),
       headers: await _headers(),
     );
     _handleResponse(response);
@@ -248,7 +247,7 @@ class ApiService {
 
   Future<void> leaveActivity(String activityId) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/api/activities/$activityId/leave'),
+      Uri.parse('$_baseUrl/api/activities/$activityId/leave'),
       headers: await _headers(),
     );
     _handleResponse(response);
@@ -258,7 +257,7 @@ class ApiService {
 
   Future<void> saveMood(String mood) async {
     await http.post(
-      Uri.parse('$baseUrl/api/moods'),
+      Uri.parse('$_baseUrl/api/moods'),
       headers: await _headers(),
       body: jsonEncode({'mood': mood, 'date': DateTime.now().toIso8601String()}),
     );
@@ -272,7 +271,7 @@ class ApiService {
   Future<Map<String, dynamic>> analyzeSentiment(String text) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/journal/analyze'),
+        Uri.parse('$_baseUrl/api/journal/analyze'),
         headers: await _headers(),
         body: jsonEncode({'text': text}),
       ).timeout(const Duration(seconds: 15));
@@ -288,7 +287,7 @@ class ApiService {
   Future<Map<String, dynamic>> analyzeMood(String text) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/journal/analyze-mood'),
+        Uri.parse('$_baseUrl/api/journal/analyze-mood'),
         headers: await _headers(),
         body: jsonEncode({'text': text}),
       ).timeout(const Duration(seconds: 10));
@@ -307,7 +306,7 @@ class ApiService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/journal/joya-response'),
+        Uri.parse('$_baseUrl/api/journal/joya-response'),
         headers: await _headers(),
         body: jsonEncode({'text': text, 'moodLabel': moodLabel}),
       ).timeout(const Duration(seconds: 15));
@@ -328,7 +327,7 @@ class ApiService {
     double? sentimentScore,
   }) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/api/journal/entries'),
+      Uri.parse('$_baseUrl/api/journal/entries'),
       headers: await _headers(),
       body: jsonEncode({
         'content':        content.trim(),
@@ -348,7 +347,7 @@ class ApiService {
     int limit = 10,
   }) async {
     try {
-      final uri = Uri.parse('$baseUrl/api/journal/entries').replace(
+      final uri = Uri.parse('$_baseUrl/api/journal/entries').replace(
         queryParameters: {
           'page':  page.toString(),
           'limit': limit.toString(),
@@ -369,7 +368,7 @@ class ApiService {
   // ── Récupérer une entrée par ID ───────────────────────────────────────────
   Future<Map<String, dynamic>> getJournalEntry(String id) async {
     final response = await http.get(
-      Uri.parse('$baseUrl/api/journal/entries/$id'),
+      Uri.parse('$_baseUrl/api/journal/entries/$id'),
       headers: await _headers(),
     ).timeout(const Duration(seconds: 10));
 
@@ -383,7 +382,7 @@ class ApiService {
     List<String>? tags,
   }) async {
     final response = await http.put(
-      Uri.parse('$baseUrl/api/journal/entries/$id'),
+      Uri.parse('$_baseUrl/api/journal/entries/$id'),
       headers: await _headers(),
       body: jsonEncode({
         if (content != null) 'content': content.trim(),
@@ -397,7 +396,7 @@ class ApiService {
   // ── Supprimer une entrée ──────────────────────────────────────────────────
   Future<void> deleteJournalEntry(String id) async {
     final response = await http.delete(
-      Uri.parse('$baseUrl/api/journal/entries/$id'),
+      Uri.parse('$_baseUrl/api/journal/entries/$id'),
       headers: await _headers(),
     ).timeout(const Duration(seconds: 10));
 
@@ -409,7 +408,7 @@ class ApiService {
     String period = 'week',
   }) async {
     try {
-      final uri = Uri.parse('$baseUrl/api/journal/stats').replace(
+      final uri = Uri.parse('$_baseUrl/api/journal/stats').replace(
         queryParameters: {'period': period},
       );
 
@@ -439,7 +438,7 @@ class ApiService {
   Future<List<dynamic>> getNotifications() async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/notifications'),
+        Uri.parse('$_baseUrl/api/notifications'),
         headers: await _headers(),
       );
       return _handleResponse(response);
@@ -449,7 +448,7 @@ class ApiService {
   Future<void> markAllNotificationsRead() async {
     try {
       await http.put(
-        Uri.parse('$baseUrl/api/notifications/tout-lire'),
+        Uri.parse('$_baseUrl/api/notifications/tout-lire'),
         headers: await _headers(),
       );
     } catch (_) {}
@@ -457,7 +456,7 @@ class ApiService {
 
   Future<bool> checkHealth() async {
     try {
-      final response = await http.get(Uri.parse('$baseUrl/api/health'))
+      final response = await http.get(Uri.parse('$_baseUrl/api/health'))
           .timeout(const Duration(seconds: 3));
       return response.statusCode == 200;
     } catch (_) { return false; }
@@ -471,7 +470,7 @@ class ApiService {
 
   Future<void> contactAdmin({required String sujet, required String message}) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/api/demandes'),
+      Uri.parse('$_baseUrl/api/demandes'),
       headers: await _headers(),
       body: jsonEncode({
         'titre':   sujet,

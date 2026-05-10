@@ -26,8 +26,6 @@ dependencies:
 
   # Social login
   google_sign_in: ^6.2.1
-  flutter_facebook_auth: ^6.0.4
-  sign_in_with_apple: ^5.0.0
   socket_io_client: ^3.1.4
 
 dev_dependencies:
@@ -41,5 +39,5 @@ flutter:
   assets:
     - assets/images/joya.png
     - assets/images/joyaai.png
-    - assets/images/moods/        # ✅ exactly two spaces before hyphen
+    - assets/images/moods/       
      

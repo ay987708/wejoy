@@ -92,7 +92,7 @@ class _ChatPageState extends State<ChatPage> {
 
       final response = await http
           .post(
-            Uri.parse('$baseUrl/api/chat'),
+            Uri.parse('baseUrl/api/chat'),
             headers: {
               'Content-Type': 'application/json',
               'Authorization': 'Bearer $token',

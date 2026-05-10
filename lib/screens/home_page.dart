@@ -11,6 +11,7 @@ import 'package:wejoy/widgets/home/recommended_section.dart';
 import 'package:wejoy/screens/journal/journal_timeline_page.dart';
 import 'package:wejoy/screens/journal/journal_stats_page.dart';
 import 'package:wejoy/models/mood_option.dart';
+import 'package:wejoy/screens/défis/games_hub.dart';
 import 'dart:math' as math;
 
 const _rose   = Color(0xFFE84C88);
@@ -583,12 +584,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         decoration: BoxDecoration(shape: BoxShape.circle, color: _gold.withOpacity(0.10)))),
   ]);
 
-  // ── Navigation SANS Journal ──
+  // ── Navigation AVEC remplacement du widget Défis ──
   Widget _buildCurrentPage() {
     switch (_selectedNav) {
       case 0: return _buildHomePage();
       case 1: return const ActivitiePage();
-      case 2: return const DefisPage();
+      case 2: return GamesHub();      // ← REMPLACÉ
       case 3: return const ProfilePage();
       default: return const SizedBox();
     }
@@ -921,7 +922,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 fontSize: 12, fontWeight: FontWeight.w700, color: accentColor)),
             const Spacer(),
             GestureDetector(
-              // ── Navigate vers JournalTimelinePage directement ──
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const JournalTimelinePage()),

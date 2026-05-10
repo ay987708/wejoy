@@ -8,10 +8,9 @@ import 'package:wejoy/screens/auth/otp_reset_screen.dart';
 import 'dart:convert';
 import 'package:wejoy/screens/home_page.dart' hide Widget;
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
-import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+// Facebook et Apple ont été supprimés
 
-const String _baseUrl = 'http://localhost:5000';
+const String _baseUrl = 'http://10.0.2.2:5000';
 
 // ══════════════════════════════════════════════════════════
 // MODERN TOAST
@@ -217,6 +216,10 @@ class Validators {
   static String? validateConfirmPassword(String? v, String p) { if (v == null || v.isEmpty) return "Confirmation requise"; if (v != p) return "Les mots de passe ne correspondent pas"; return null; }
 }
 
+// ══════════════════════════════════════════════════════════
+// SOCIAL AUTH SERVICE (uniquement Google)
+// ══════════════════════════════════════════════════════════
+
 class SocialAuthService {
   static Future<void> signInWithGoogle(BuildContext context) async {
     try {
@@ -224,47 +227,34 @@ class SocialAuthService {
       final GoogleSignIn googleSignIn = GoogleSignIn(scopes: ['email']);
       final account = await googleSignIn.signIn();
       if (account == null) { ModernLoadingOverlay.hide(); return; }
-      final response = await http.post(Uri.parse('$_baseUrl/api/auth/social-login'), headers: {'Content-Type': 'application/json'}, body: jsonEncode({'provider': 'google', 'name': account.displayName, 'email': account.email, 'avatar': account.photoUrl, 'socialId': account.id}));
+      final response = await http.post(
+        Uri.parse('$_baseUrl/api/auth/social-login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'provider': 'google',
+          'name': account.displayName,
+          'email': account.email,
+          'avatar': account.photoUrl,
+          'socialId': account.id
+        }),
+      );
       final data = jsonDecode(response.body);
       ModernLoadingOverlay.hide();
       if (response.statusCode == 200) {
         final api = ApiService();
         await api.saveToken(data['token']);
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomePage()));
-      } else { throw Exception(data['message']); }
-    } catch (e) { ModernLoadingOverlay.hide(); ModernToast.show(context, title: "Erreur Google", message: e.toString(), type: ToastType.error); }
-  }
-
-  static Future<void> signInWithFacebook(BuildContext context) async {
-    try {
-      ModernLoadingOverlay.show(context, message: "Connexion Facebook...");
-      final result = await FacebookAuth.instance.login();
-      if (result.status != LoginStatus.success) { ModernLoadingOverlay.hide(); return; }
-      final userData = await FacebookAuth.instance.getUserData();
-      final response = await http.post(Uri.parse('$_baseUrl/api/auth/social-login'), headers: {'Content-Type': 'application/json'}, body: jsonEncode({'provider': 'facebook', 'name': userData['name'], 'email': userData['email'], 'avatar': userData['picture']['data']['url'], 'socialId': userData['id']}));
-      final data = jsonDecode(response.body);
+        if (context.mounted) {
+          Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomePage()));
+        }
+      } else {
+        throw Exception(data['message']);
+      }
+    } catch (e) {
       ModernLoadingOverlay.hide();
-      if (response.statusCode == 200) {
-        final api = ApiService();
-        await api.saveToken(data['token']);
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomePage()));
-      } else { throw Exception(data['message']); }
-    } catch (e) { ModernLoadingOverlay.hide(); ModernToast.show(context, title: "Erreur Facebook", message: e.toString(), type: ToastType.error); }
-  }
-
-  static Future<void> signInWithApple(BuildContext context) async {
-    try {
-      ModernLoadingOverlay.show(context, message: "Connexion Apple...");
-      final credential = await SignInWithApple.getAppleIDCredential(scopes: [AppleIDAuthorizationScopes.email, AppleIDAuthorizationScopes.fullName]);
-      final response = await http.post(Uri.parse('$_baseUrl/api/auth/social-login'), headers: {'Content-Type': 'application/json'}, body: jsonEncode({'provider': 'apple', 'name': credential.givenName ?? 'Apple User', 'email': credential.email ?? '', 'socialId': credential.userIdentifier}));
-      final data = jsonDecode(response.body);
-      ModernLoadingOverlay.hide();
-      if (response.statusCode == 200) {
-        final api = ApiService();
-        await api.saveToken(data['token']);
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomePage()));
-      } else { throw Exception(data['message']); }
-    } catch (e) { ModernLoadingOverlay.hide(); ModernToast.show(context, title: "Erreur Apple", message: e.toString(), type: ToastType.error); }
+      if (context.mounted) {
+        ModernToast.show(context, title: "Erreur Google", message: e.toString(), type: ToastType.error);
+      }
+    }
   }
 }
 
@@ -391,7 +381,6 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     finally { setState(() => isLoading = false); }
   }
 
-  // ✅ MODIFIÉE — navigue vers OtpResetScreen après envoi
   Future<void> forgotPassword() async {
     final email = emailController.text.trim();
     if (email.isEmpty || !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
@@ -471,15 +460,24 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
   Widget _buildSocialButtons() {
     return Column(children: [
-      Row(children: [const Expanded(child: Divider()), Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Text("Ou continuer avec", style: TextStyle(color: Colors.grey.shade500, fontSize: 13))), const Expanded(child: Divider())]),
-      const SizedBox(height: 20),
       Row(children: [
-        Expanded(child: SocialButton(icon: Icons.g_mobiledata, label: "Google",   color: const Color(0xFFDB4437), onPressed: () => SocialAuthService.signInWithGoogle(context))),
-        const SizedBox(width: 12),
-        Expanded(child: SocialButton(icon: Icons.facebook,     label: "Facebook", color: const Color(0xFF4267B2), onPressed: () => SocialAuthService.signInWithFacebook(context))),
-        const SizedBox(width: 12),
-        Expanded(child: SocialButton(icon: Icons.apple,        label: "Apple",    color: Colors.black,           onPressed: () => SocialAuthService.signInWithApple(context))),
+        const Expanded(child: Divider()),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Text("Ou continuer avec", style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
+        ),
+        const Expanded(child: Divider()),
       ]),
+      const SizedBox(height: 20),
+      SizedBox(
+        width: double.infinity,
+        child: SocialButton(
+          icon: Icons.g_mobiledata,
+          label: "Google",
+          color: const Color(0xFFDB4437),
+          onPressed: () => SocialAuthService.signInWithGoogle(context),
+        ),
+      ),
     ]);
   }
 

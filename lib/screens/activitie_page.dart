@@ -5,7 +5,7 @@ import 'package:wejoy/chat_tab.dart';
 import 'dart:convert';
 
 
-const String _baseUrl = 'http://localhost:5000';
+const String _baseUrl = 'http://10.0.2.2:5000';
 const Color _rose   = Color(0xFFD63FBF);
 const Color _violet = Color(0xFF7C3AED);
 const Color _ink    = Color(0xFF0F0F1A);

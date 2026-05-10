@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
-const String _base  = 'http://localhost:5000';
+const String _baseUrl = 'http://10.0.2.2:5000';
 const Color _rose   = Color(0xFFD63FBF);
 const Color _violet = Color(0xFF7C3AED);
 const Color _ink    = Color(0xFF0F0F1A);
@@ -45,7 +45,7 @@ class _TachesPageState extends State<TachesPage> with SingleTickerProviderStateM
   Future<void> _load({bool silent = false}) async {
     if (!silent) setState(() => _loading = true);
     try {
-      final res = await http.get(Uri.parse('$_base/api/tasks'), headers: await _headers());
+      final res = await http.get(Uri.parse('$_baseUrl/api/tasks'), headers: await _headers());
       if (res.statusCode == 200 && mounted) {
         final all = List<dynamic>.from(jsonDecode(res.body));
         setState(() {
@@ -62,7 +62,7 @@ class _TachesPageState extends State<TachesPage> with SingleTickerProviderStateM
   Future<void> _addPersonal() async {
     final title = _personalCtrl.text.trim();
     if (title.isEmpty) return;
-    await http.post(Uri.parse('$_base/api/tasks'), headers: await _headers(),
+    await http.post(Uri.parse('$_baseUrl/api/tasks'), headers: await _headers(),
       body: jsonEncode({'title': title, 'type': 'personal'}));
     _personalCtrl.clear();
     _load(silent: true);
@@ -70,19 +70,19 @@ class _TachesPageState extends State<TachesPage> with SingleTickerProviderStateM
 
   // ── Completer / Decompleter ───────────────────────────────────────────────
   Future<void> _toggleComplete(String id) async {
-    await http.post(Uri.parse('$_base/api/tasks/$id/complete'), headers: await _headers());
+    await http.post(Uri.parse('$_baseUrl/api/tasks/$id/complete'), headers: await _headers());
     _load(silent: true);
   }
 
   // ── Supprimer ─────────────────────────────────────────────────────────────
   Future<void> _delete(String id) async {
-    await http.delete(Uri.parse('$_base/api/tasks/$id'), headers: await _headers());
+    await http.delete(Uri.parse('$_baseUrl/api/tasks/$id'), headers: await _headers());
     _load(silent: true);
   }
 
   // ── Envoyer rappel ────────────────────────────────────────────────────────
   Future<void> _remind(String id, String title) async {
-    final res = await http.post(Uri.parse('$_base/api/tasks/$id/remind'), headers: await _headers());
+    final res = await http.post(Uri.parse('$_baseUrl/api/tasks/$id/remind'), headers: await _headers());
     if (mounted) {
       final data = jsonDecode(res.body);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -206,7 +206,7 @@ class _TachesPageState extends State<TachesPage> with SingleTickerProviderStateM
                   if (titleCtrl.text.trim().isEmpty) return;
                   final members = membersCtrl.text.trim().isEmpty ? [] : membersCtrl.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
                   Navigator.pop(ctx);
-                  await http.post(Uri.parse('$_base/api/tasks'), headers: await _headers(),
+                  await http.post(Uri.parse('$_baseUrl/api/tasks'), headers: await _headers(),
                     body: jsonEncode({
                       'title':           titleCtrl.text.trim(),
                       'description':     descCtrl.text.trim(),

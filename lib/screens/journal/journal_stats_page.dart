@@ -116,7 +116,7 @@ class JournalStats {
 
 // ─── Service ──────────────────────────────────────────────────────────────────
 class JournalStatsService {
-  static const _base = 'http://localhost:5000/api/journal';
+  static const _base = 'http://10.0.2.2:5000/api/journal';
 
   static Future<JournalStats> fetch() async {
     final token = await ApiService().getToken();

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
-const String _baseUrl = 'http://localhost:5000';
+const String _baseUrl = 'http://10.0.2.2:5000';
 
 class OtpResetScreen extends StatefulWidget {
   final String email;
