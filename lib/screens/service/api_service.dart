@@ -45,23 +45,35 @@ class ApiService {
   }
 
   // ─── Gestion des réponses ─────────────────────────────────────────────────
-  dynamic _handleResponse(http.Response response) {
-    print('Status: ${response.statusCode}');
+ dynamic _handleResponse(http.Response response) {
+  print('Status: ${response.statusCode}');
+  print('Body: ${response.body}');
+
+  if (response.statusCode >= 200 && response.statusCode < 300) {
+    if (response.body.isEmpty) {
+      return {};
+    }
+
     try {
-      final body = jsonDecode(response.body);
-      if (response.statusCode >= 200 && response.statusCode < 300) return body;
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: body['message'] ?? 'Erreur inconnue',
-      );
+      return jsonDecode(response.body);
     } catch (e) {
-      if (response.statusCode >= 200 && response.statusCode < 300) return null;
-      throw ApiException(
-        statusCode: response.statusCode,
-        message: 'Erreur de communication avec le serveur',
-      );
+      return {};
     }
   }
+
+  try {
+    final body = jsonDecode(response.body);
+    throw ApiException(
+      statusCode: response.statusCode,
+      message: body['message'] ?? 'Erreur inconnue',
+    );
+  } catch (e) {
+    throw ApiException(
+      statusCode: response.statusCode,
+      message: 'Erreur de communication avec le serveur',
+    );
+  }
+}
 
   // ════════════════════════════════════════════════════════════════════════
   // AUTH
@@ -103,6 +115,50 @@ class ApiService {
     }
   }
 
+  // ─── Mot de passe oublié — envoie l'OTP par email ────────────────────────
+  Future<Map<String, dynamic>> forgotPassword(String email) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/auth/forgot-password'),
+        headers: await _headers(auth: false),
+        body: jsonEncode({'email': email}),
+      ).timeout(const Duration(seconds: 10));
+      final data = jsonDecode(response.body);
+      return {
+        'success': response.statusCode == 200,
+        'message': data['message'] ?? 'Code envoyé.',
+      };
+    } catch (e) {
+      throw ApiException(statusCode: 0, message: 'Impossible de contacter le serveur');
+    }
+  }
+
+  // ─── Réinitialisation du mot de passe avec OTP ───────────────────────────
+  Future<Map<String, dynamic>> resetPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/auth/reset-password'),
+        headers: await _headers(auth: false),
+        body: jsonEncode({
+          'email': email,
+          'otp': otp,
+          'newPassword': newPassword,
+        }),
+      ).timeout(const Duration(seconds: 10));
+      final data = jsonDecode(response.body);
+      return {
+        'success': response.statusCode == 200,
+        'message': data['message'] ?? 'Erreur.',
+      };
+    } catch (e) {
+      throw ApiException(statusCode: 0, message: 'Impossible de contacter le serveur');
+    }
+  }
+
   // ════════════════════════════════════════════════════════════════════════
   // PROFIL
   // ════════════════════════════════════════════════════════════════════════
@@ -129,6 +185,7 @@ class ApiService {
     );
     return UserProfile.fromJson(_handleResponse(response));
   }
+
   // ACTIVITÉS
 
   Future<List<Activity>> getRecommendedActivities() async {
@@ -155,7 +212,6 @@ class ApiService {
     } catch (e) { return []; }
   }
 
-  // créer une activité (utilisé par activitie_page)
   Future<Map<String, dynamic>> createActivity(Map<String, dynamic> data) async {
     final response = await http.post(
       Uri.parse('$baseUrl/api/activities'),
@@ -165,7 +221,6 @@ class ApiService {
     return _handleResponse(response);
   }
 
-  //  modifier une activité
   Future<Map<String, dynamic>> updateActivity(String id, Map<String, dynamic> data) async {
     final response = await http.put(
       Uri.parse('$baseUrl/api/activities/$id'),
@@ -175,7 +230,6 @@ class ApiService {
     return _handleResponse(response);
   }
 
-  // supprimer une activité
   Future<void> deleteActivity(String id) async {
     final response = await http.delete(
       Uri.parse('$baseUrl/api/activities/$id'),
@@ -199,6 +253,7 @@ class ApiService {
     );
     _handleResponse(response);
   }
+
   // HUMEUR
 
   Future<void> saveMood(String mood) async {
@@ -208,6 +263,177 @@ class ApiService {
       body: jsonEncode({'mood': mood, 'date': DateTime.now().toIso8601String()}),
     );
   }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // JOURNAL
+  // ════════════════════════════════════════════════════════════════════════
+
+  // ── Analyser le sentiment d'un texte (Gemini via backend) ────────────────
+  Future<Map<String, dynamic>> analyzeSentiment(String text) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/journal/analyze'),
+        headers: await _headers(),
+        body: jsonEncode({'text': text}),
+      ).timeout(const Duration(seconds: 15));
+
+      return _handleResponse(response);
+    } catch (e) {
+      return {'sentiment': 'Neutre', 'score': 0, 'message': 'Analyse indisponible'};
+    }
+  }
+
+  // ── Détecteur de mood IA en temps réel (badge) ────────────────────────────
+  // Retourne : { 'mood': 'mélancolie', 'emoji': '💜' }
+  Future<Map<String, dynamic>> analyzeMood(String text) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/journal/analyze-mood'),
+        headers: await _headers(),
+        body: jsonEncode({'text': text}),
+      ).timeout(const Duration(seconds: 10));
+
+      return _handleResponse(response);
+    } catch (e) {
+      return {};
+    }
+  }
+
+  // ── Réponse wellness Joya après soumission ────────────────────────────────
+  // Retourne : { 'response': '...' }
+  Future<String?> getJoyaResponse({
+    required String text,
+    required String moodLabel,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/journal/joya-response'),
+        headers: await _headers(),
+        body: jsonEncode({'text': text, 'moodLabel': moodLabel}),
+      ).timeout(const Duration(seconds: 15));
+
+      final data = _handleResponse(response);
+      return data['response'] as String?;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // ── Créer une nouvelle entrée ─────────────────────────────────────────────
+  Future<Map<String, dynamic>> createJournalEntry({
+    required String content,
+    required int moodValue,
+    List<String> tags = const [],
+    String? sentiment,
+    double? sentimentScore,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/journal/entries'),
+      headers: await _headers(),
+      body: jsonEncode({
+        'content':        content.trim(),
+        'moodValue':      moodValue,
+        'tags':           tags,
+        if (sentiment != null) 'sentiment': sentiment,
+        if (sentimentScore != null) 'sentimentScore': sentimentScore,
+      }),
+    ).timeout(const Duration(seconds: 12));
+
+    return _handleResponse(response);
+  }
+
+  // ── Récupérer les entrées (paginées) ─────────────────────────────────────
+  Future<Map<String, dynamic>> getJournalEntries({
+    int page = 1,
+    int limit = 10,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/journal/entries').replace(
+        queryParameters: {
+          'page':  page.toString(),
+          'limit': limit.toString(),
+        },
+      );
+
+      final response = await http.get(
+        uri,
+        headers: await _headers(),
+      ).timeout(const Duration(seconds: 12));
+
+      return _handleResponse(response);
+    } catch (e) {
+      return {'entries': [], 'pagination': {}};
+    }
+  }
+
+  // ── Récupérer une entrée par ID ───────────────────────────────────────────
+  Future<Map<String, dynamic>> getJournalEntry(String id) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/journal/entries/$id'),
+      headers: await _headers(),
+    ).timeout(const Duration(seconds: 10));
+
+    return _handleResponse(response);
+  }
+
+  // ── Modifier une entrée ───────────────────────────────────────────────────
+  Future<Map<String, dynamic>> updateJournalEntry(
+    String id, {
+    String? content,
+    List<String>? tags,
+  }) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/api/journal/entries/$id'),
+      headers: await _headers(),
+      body: jsonEncode({
+        if (content != null) 'content': content.trim(),
+        if (tags != null) 'tags': tags,
+      }),
+    ).timeout(const Duration(seconds: 12));
+
+    return _handleResponse(response);
+  }
+
+  // ── Supprimer une entrée ──────────────────────────────────────────────────
+  Future<void> deleteJournalEntry(String id) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/api/journal/entries/$id'),
+      headers: await _headers(),
+    ).timeout(const Duration(seconds: 10));
+
+    _handleResponse(response);
+  }
+
+  // ── Stats complètes ───────────────────────────────────────────────────────
+  Future<Map<String, dynamic>> getJournalStats({
+    String period = 'week',
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl/api/journal/stats').replace(
+        queryParameters: {'period': period},
+      );
+
+      final response = await http.get(
+        uri,
+        headers: await _headers(),
+      ).timeout(const Duration(seconds: 12));
+
+      return _handleResponse(response);
+    } catch (e) {
+      return {
+        'totalEntries':    0,
+        'avgMoodValue':    0,
+        'avgMoodLabel':    'Neutre',
+        'wellnessScore':   0,
+        'streak':          0,
+        'moodDistribution': [],
+        'weeklyMoods':     [],
+        'topTags':         [],
+        'weeklySummary':   'Impossible de charger les stats.',
+      };
+    }
+  }
+
   // NOTIFICATIONS
 
   Future<List<dynamic>> getNotifications() async {
@@ -220,7 +446,6 @@ class ApiService {
     } catch (e) { return []; }
   }
 
-  //Marquer toutes les notifications comme lues
   Future<void> markAllNotificationsRead() async {
     try {
       await http.put(
@@ -244,18 +469,17 @@ class ApiService {
 
   Future<dynamic> getCommunityFeed() async {}
 
-
-Future<void> contactAdmin({required String sujet, required String message}) async {
-  final response = await http.post(
-    Uri.parse('$baseUrl/api/demandes'),
-    headers: await _headers(),
-    body: jsonEncode({
-      'titre':   sujet,
-      'message': message,
-    }),
-  );
-  _handleResponse(response);
-}
+  Future<void> contactAdmin({required String sujet, required String message}) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/demandes'),
+      headers: await _headers(),
+      body: jsonEncode({
+        'titre':   sujet,
+        'message': message,
+      }),
+    );
+    _handleResponse(response);
+  }
 }
 
 // ─── Exception ────────────────────────────────────────────────────────────────
@@ -266,7 +490,8 @@ class ApiException implements Exception {
   @override
   String toString() => 'ApiException($statusCode): $message';
 }
-// MODÈLES
+
+// ─── MODÈLES ──────────────────────────────────────────────────────────────────
 
 class UserProfile {
   final String id;
@@ -313,7 +538,7 @@ class Activity {
   final String category;
   final String description;
   final String imageUrl;
-  final bool isOfficial;      
+  final bool isOfficial;
   final String? date;
   final String? timeSlot;
   final String? location;
@@ -321,7 +546,7 @@ class Activity {
   final int? maxParticipants;
   final bool isIndividual;
   final bool isDaily;
-  final Map<String, dynamic>? createdBy;  
+  final Map<String, dynamic>? createdBy;
 
   Activity({
     required this.id,
@@ -361,5 +586,4 @@ class Activity {
     if (currentParticipants == null || maxParticipants == null) return null;
     return '$currentParticipants/$maxParticipants';
   }
-
 }

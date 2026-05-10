@@ -26,6 +26,7 @@ class AdminApiService extends ChangeNotifier {
     }
     notifyListeners();
   }
+ 
 
   // ✅ Toujours lire le token depuis SharedPreferences — évite le bug du token null
   Future<Map<String, String>> _getHeaders() async {
@@ -202,6 +203,21 @@ Future<void> deleteNotification(String id) async {
 
   if (res.statusCode != 200) {
     throw Exception("Erreur suppression notif: ${res.statusCode}");
+  }
+}
+
+  Future<void> markAllNotificationsRead() async {
+  final h = await _getHeaders();
+
+  final res = await http.put(
+    Uri.parse('$baseUrl/admin/notifications/mark-all-read'),
+    headers: h,
+  );
+
+  if (res.statusCode != 200) {
+    throw Exception(
+      'Erreur mark all read: ${res.statusCode}'
+    );
   }
 }
 }
