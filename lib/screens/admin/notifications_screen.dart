@@ -4,7 +4,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:wejoy/screens/service/admin_api_service.dart';
 
 class NotificationsScreen extends StatefulWidget {
-  const NotificationsScreen({super.key});
+  final VoidCallback? onAllRead;
+
+  const NotificationsScreen({super.key, this.onAllRead});
 
   @override
   State<NotificationsScreen> createState() => _NotificationsScreenState();
@@ -18,7 +20,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   final _messageCtrl = TextEditingController();
   final _emailCtrl   = TextEditingController();
   bool _sending = false;
-  bool _toBroadcast = true; // toggle tous / par email
+  bool _toBroadcast = true;
 
   @override
   void initState() {
@@ -69,6 +71,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       _snack('Erreur : $e', error: true);
     }
     setState(() => _sending = false);
+  }
+
+  Future<void> _markAllRead() async {
+    try {
+      await context.read<AdminApiService>().markAllNotificationsRead();
+      setState(() {
+        _notifs = _notifs.map((n) {
+          final map = Map<String, dynamic>.from(n);
+          map['lu'] = true;
+          return map;
+        }).toList();
+      });
+      widget.onAllRead?.call();
+      _snack('Toutes les notifications marquées comme lues ✅');
+    } catch (e) {
+      _snack('Erreur : $e', error: true);
+    }
   }
 
   Future<void> _delete(String id) async {
@@ -147,8 +166,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     return await showDialog<bool>(
           context: context,
           builder: (_) => AlertDialog(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20)),
             title: Text('Confirmation',
                 style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
             content: Text(message, style: GoogleFonts.poppins(fontSize: 13)),
@@ -183,8 +202,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           error ? const Color(0xFFEF4444) : const Color(0xFF10B981),
       behavior: SnackBarBehavior.floating,
       margin: const EdgeInsets.all(16),
-      shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
     ));
   }
 
@@ -274,8 +292,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 // ── Titre ─────────────────────────────────────
                 TextField(
                   controller: _titreCtrl,
-                  decoration: _inputDeco('Titre de la notification',
-                      Icons.title_rounded),
+                  decoration: _inputDeco(
+                      'Titre de la notification', Icons.title_rounded),
                 ),
                 const SizedBox(height: 12),
 
@@ -283,8 +301,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 TextField(
                   controller: _messageCtrl,
                   maxLines: 3,
-                  decoration:
-                      _inputDeco('Message', Icons.message_outlined),
+                  decoration: _inputDeco('Message', Icons.message_outlined),
                 ),
                 const SizedBox(height: 20),
 
@@ -323,10 +340,30 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
           const SizedBox(height: 28),
 
-          // ── Historique ───────────────────────────────────────
-          Text('Historique des notifications',
-              style: GoogleFonts.poppins(
-                  fontSize: 17, fontWeight: FontWeight.w600)),
+          // ── Historique header + bouton "Tout marquer comme lu" ──
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Historique des notifications',
+                  style: GoogleFonts.poppins(
+                      fontSize: 17, fontWeight: FontWeight.w600)),
+              TextButton.icon(
+                onPressed: _notifs.isEmpty ? null : _markAllRead,
+                icon: const Icon(Icons.done_all_rounded, size: 16),
+                label: Text('Tout marquer comme lu',
+                    style: GoogleFonts.poppins(
+                        fontSize: 12, fontWeight: FontWeight.w600)),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFFA855F7),
+                  backgroundColor: const Color(0xFFF3E8FF),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 16),
 
           if (_loading)
@@ -356,15 +393,21 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   // ── Notification card ─────────────────────────────────────────────────────
   Widget _notifCard(Map<String, dynamic> n) {
-    final isBroadcast = n['broadcast'] == true || n['destinataire'] == 'Tous les utilisateurs';
+    final isBroadcast = n['broadcast'] == true ||
+        n['destinataire'] == 'Tous les utilisateurs';
+    final isRead = n['lu'] == true;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isRead ? Colors.white : const Color(0xFFFAF5FF),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(
+          color: isRead
+              ? const Color(0xFFE5E7EB)
+              : const Color(0xFFDDD6FE),
+        ),
         boxShadow: [
           BoxShadow(
               color: Colors.black.withOpacity(0.03),
@@ -402,15 +445,27 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Titre + badge
+                // Titre + badges
                 Row(
                   children: [
                     Expanded(
                       child: Text(n['titre'] ?? '',
                           style: GoogleFonts.poppins(
-                              fontSize: 14, fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
                               color: const Color(0xFF1A1A2E))),
                     ),
+                    // Badge lu / non lu
+                    if (!isRead)
+                      Container(
+                        margin: const EdgeInsets.only(right: 6),
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFA855F7),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 3),
@@ -487,15 +542,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     ),
                     const SizedBox(width: 8),
                     OutlinedButton.icon(
-                      onPressed: () =>
-                          _delete(n['_id']?.toString() ?? n['id']?.toString() ?? ''),
+                      onPressed: () => _delete(
+                          n['_id']?.toString() ?? n['id']?.toString() ?? ''),
                       icon: const Icon(Icons.delete_outline_rounded, size: 14),
                       label: Text('Supprimer',
                           style: GoogleFonts.poppins(fontSize: 12)),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFFEF4444),
-                        side: const BorderSide(
-                            color: Color(0xFFFEE2E2)),
+                        side: const BorderSide(color: Color(0xFFFEE2E2)),
                         padding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 6),
                         shape: RoundedRectangleBorder(
@@ -523,17 +577,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           color: active ? Colors.white : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           boxShadow: active
-              ? [BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
-                  blurRadius: 6, offset: const Offset(0, 2))]
+              ? [
+                  BoxShadow(
+                      color: Colors.black.withOpacity(0.06),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2))
+                ]
               : [],
         ),
         child: Center(
           child: Text(label,
               style: GoogleFonts.poppins(
                   fontSize: 12,
-                  fontWeight:
-                      active ? FontWeight.w600 : FontWeight.w400,
+                  fontWeight: active ? FontWeight.w600 : FontWeight.w400,
                   color: active
                       ? const Color(0xFF1A1A2E)
                       : Colors.grey[500])),
@@ -555,7 +611,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   InputDecoration _inputDeco(String label, [IconData? icon]) {
     return InputDecoration(
       labelText: label,
-      labelStyle: GoogleFonts.poppins(fontSize: 13, color: Colors.grey[500]),
+      labelStyle:
+          GoogleFonts.poppins(fontSize: 13, color: Colors.grey[500]),
       prefixIcon: icon != null
           ? Icon(icon, size: 18, color: Colors.grey[400])
           : null,

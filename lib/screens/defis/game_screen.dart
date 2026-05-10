@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:wejoy/screens/d%C3%A9fis/home_screen.dart';
+import 'package:wejoy/screens/defis/home_screen.dart';
 import 'package:wejoy/screens/service/socket_service.dart';
-import 'home_screen.dart';
+
 
 class GameScreen extends StatefulWidget {
   final String roomId;

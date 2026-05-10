@@ -45,6 +45,7 @@ class _UsersScreenState extends State<UsersScreen> {
     } catch (e) { debugPrint('❌ $e'); }
     setState(() => _loading = false);
   }
+  
 
   // ── Bloquer / Débloquer ───────────────────────────────────────────────────
   Future<void> _toggleBlock(dynamic u) async {
@@ -259,7 +260,7 @@ class _UsersScreenState extends State<UsersScreen> {
                               backgroundColor: isBlocked
                                 ? const Color(0xFFFEF3C7)
                                 : const Color(0xFFF3E8FF),
-                              child: Text(u['avatar'] ?? '??',
+                              child: Text(_initials(u['username']),
                                 style: GoogleFonts.poppins(
                                   fontSize: 11, fontWeight: FontWeight.w600,
                                   color: isBlocked ? const Color(0xFFF59E0B) : const Color(0xFFA855F7))),
@@ -291,7 +292,7 @@ class _UsersScreenState extends State<UsersScreen> {
                                 : const Color(0xFF1A1A2E),
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            child: Text(u['statut'] ?? '',
+                            child: Text(isBlocked ? 'Bloqué' : 'Actif',
                               style: GoogleFonts.poppins(
                                 fontSize: 11, fontWeight: FontWeight.w500,
                                 color: isBlocked ? const Color(0xFFF59E0B) : Colors.white)),
@@ -356,4 +357,13 @@ class _UsersScreenState extends State<UsersScreen> {
       ]),
     );
   }
+  
+String _initials(dynamic name) {
+  if (name == null || name.toString().isEmpty) return '?';
+  final parts = name.toString().trim().split(RegExp(r'\s+'));
+  if (parts.length >= 2) {
+    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+  }
+  return parts[0][0].toUpperCase();
+}
 }
