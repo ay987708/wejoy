@@ -1,6 +1,7 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -15,6 +16,19 @@ const Color _ink    = Color(0xFF0F0F1A);
 const Color _slate  = Color(0xFF64748B);
 const Color _snow   = Color(0xFFF8FAFC);
 const Color _border = Color(0xFFEEEEF5);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HELPER : détecter le bon sous-type MIME selon l'extension du fichier
+// ═══════════════════════════════════════════════════════════════════════════
+String _mimeSubtype(String? name) {
+  final ext = (name ?? '').split('.').last.toLowerCase();
+  switch (ext) {
+    case 'png':  return 'png';
+    case 'gif':  return 'gif';
+    case 'webp': return 'webp';
+    default:     return 'jpeg';
+  }
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // PAGE LISTE
@@ -35,7 +49,6 @@ class _ActivitiePageState extends State<ActivitiePage>
   String _selCat            = 'Tous';
   final _cats = ['Tous','Cuisine','Lecture','Jardinage','Yoga','Sport','Autre'];
 
-  // Raccourcis thème
   Color get _rose   => context.read<ThemeProvider>().color1;
   Color get _violet => context.read<ThemeProvider>().color2;
 
@@ -59,7 +72,9 @@ class _ActivitiePageState extends State<ActivitiePage>
 
   Future<void> _fetch() async {
     setState(() => _loading = true);
+    
     try {
+      
       final res = await http.get(
         Uri.parse('$_baseUrl/api/activities'),
         headers: {'Authorization': 'Bearer ${await _tok()}'},
@@ -119,7 +134,6 @@ class _ActivitiePageState extends State<ActivitiePage>
 
   @override
   Widget build(BuildContext context) {
-    // Écoute les changements de thème
     context.watch<ThemeProvider>();
 
     return Scaffold(
@@ -377,12 +391,12 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabCtrl;
   Map<String, dynamic>? _activity;
-  bool _loading      = true;
-  bool _isMember     = false;
-  bool _isGroupAdmin = false;
-  int  _unreadChat   = 0;
+  bool _loading        = true;
+  bool _isMember       = false;
+  bool _isGroupAdmin   = false;
+  int  _unreadChat     = 0;
+  String _currentUserId = ''; // ✅ ID de l'utilisateur connecté
 
-  // Raccourcis thème
   Color get _rose   => context.read<ThemeProvider>().color1;
   Color get _violet => context.read<ThemeProvider>().color2;
 
@@ -404,17 +418,19 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
   Future<void> _fetch() async {
     setState(() => _loading = true);
     try {
+      // ✅ Récupérer l'ID utilisateur connecté
+      final prefs = await SharedPreferences.getInstance();
+      _currentUserId = prefs.getString('user_id') ?? '';
+
       final res = await http.get(
         Uri.parse('$_baseUrl/api/activities/${widget.activityId}'),
         headers: {'Authorization': 'Bearer ${await _tok()}'},
       );
       if (res.statusCode == 200) {
-        final data  = jsonDecode(res.body);
-        final prefs = await SharedPreferences.getInstance();
-        final lastSeen =
-          prefs.getInt('chat_last_seen_${widget.activityId}') ?? 0;
-        final chat = List<dynamic>.from(data['chat'] ?? []);
-        final unread = chat.where((m) {
+        final data    = jsonDecode(res.body);
+        final lastSeen = prefs.getInt('chat_last_seen_${widget.activityId}') ?? 0;
+        final chat    = List<dynamic>.from(data['chat'] ?? []);
+        final unread  = chat.where((m) {
           final t = DateTime.tryParse(m['createdAt'] ?? '')
             ?.millisecondsSinceEpoch ?? 0;
           return t > lastSeen;
@@ -441,7 +457,7 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
   }
 
   Future<void> _toggleJoin() async {
-    final rose   = _rose;
+    final rose      = _rose;
     final isLeaving = _isMember;
     final confirmed = await showDialog<bool>(
       context: context,
@@ -534,6 +550,192 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
       body: jsonEncode({'text': result}),
     );
     _fetch();
+  }
+
+  // ✅ NOUVEAU : Modifier un contenu
+  Future<void> _editContent(String contentId, Map<String, dynamic> current) async {
+    final rose   = _rose;
+    final violet = _violet;
+    final titleCtrl = TextEditingController(text: current['title']?.toString() ?? '');
+    final bodyCtrl  = TextEditingController(text: current['body']?.toString() ?? '');
+    String type = current['type']?.toString() ?? 'Autre';
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setStateDialog) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start, children: [
+              // ── En-tête
+              Row(children: [
+                Container(
+                  width: 38, height: 38,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: [rose, violet]),
+                    borderRadius: BorderRadius.circular(11)),
+                  child: const Icon(Icons.edit_outlined, color: Colors.white, size: 20)),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text('Modifier le contenu',
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: _ink))),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: () => Navigator.pop(ctx)),
+              ]),
+              const SizedBox(height: 18),
+              // ── Titre
+              TextField(
+                controller: titleCtrl,
+                style: const TextStyle(fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'Titre',
+                  hintStyle: TextStyle(color: _slate.withOpacity(0.4), fontSize: 13),
+                  filled: true, fillColor: _snow,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: _border)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: _border)),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: rose, width: 2))),
+              ),
+              const SizedBox(height: 10),
+              // ── Corps
+              TextField(
+                controller: bodyCtrl,
+                maxLines: 4,
+                style: const TextStyle(fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'Contenu...',
+                  hintStyle: TextStyle(color: _slate.withOpacity(0.4), fontSize: 13),
+                  filled: true, fillColor: _snow,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: _border)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: _border)),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: rose, width: 2))),
+              ),
+              const SizedBox(height: 10),
+              // ── Type
+              DropdownButtonFormField<String>(
+                value: type,
+                decoration: InputDecoration(
+                  filled: true, fillColor: _snow,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: _border)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: _border))),
+                style: const TextStyle(fontSize: 13, color: _ink),
+                items: ['Recette','Article','Conseil','Autre'].map((t) =>
+                  DropdownMenuItem(value: t, child: Text(t))).toList(),
+                onChanged: (v) => setStateDialog(() => type = v!),
+              ),
+              const SizedBox(height: 20),
+              // ── Actions
+              Row(children: [
+                Expanded(child: OutlinedButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: _slate, side: const BorderSide(color: _border),
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                  child: const Text('Annuler',
+                    style: TextStyle(fontWeight: FontWeight.w500)))),
+                const SizedBox(width: 10),
+                Expanded(child: ElevatedButton(
+                  onPressed: () {
+                    if (titleCtrl.text.trim().isEmpty || bodyCtrl.text.trim().isEmpty) return;
+                    Navigator.pop(ctx, {
+                      'title': titleCtrl.text.trim(),
+                      'body':  bodyCtrl.text.trim(),
+                      'type':  type,
+                    });
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: rose, foregroundColor: Colors.white, elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                  child: const Text('Enregistrer',
+                    style: TextStyle(fontWeight: FontWeight.w600)))),
+              ]),
+            ]),
+          ),
+        ),
+      ),
+    );
+
+    if (result == null) return;
+    final res = await http.put(
+      Uri.parse('$_baseUrl/api/activities/${widget.activityId}/content/$contentId'),
+      headers: {
+        'Authorization': 'Bearer ${await _tok()}',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(result),
+    );
+    if ((res.statusCode == 200 || res.statusCode == 201) && mounted) {
+      _showSuccess('Contenu modifié ✅');
+      _fetch();
+    }
+  }
+
+  // ✅ NOUVEAU : Supprimer un contenu
+  Future<void> _deleteContent(String contentId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Supprimer ce contenu',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _ink)),
+        content: Text(
+          'Cette action est irréversible.',
+          style: TextStyle(fontSize: 13, color: _slate.withOpacity(0.8))),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        actions: [Row(children: [
+          Expanded(child: OutlinedButton(
+            onPressed: () => Navigator.pop(context, false),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: _slate, side: const BorderSide(color: _border),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+            child: const Text('Annuler',
+              style: TextStyle(fontWeight: FontWeight.w500)))),
+          const SizedBox(width: 10),
+          Expanded(child: ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red[400], foregroundColor: Colors.white,
+              elevation: 0, padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+            child: const Text('Supprimer',
+              style: TextStyle(fontWeight: FontWeight.w600)))),
+        ])],
+      ),
+    );
+    if (confirmed != true) return;
+    final res = await http.delete(
+      Uri.parse('$_baseUrl/api/activities/${widget.activityId}/content/$contentId'),
+      headers: {'Authorization': 'Bearer ${await _tok()}'},
+    );
+    if ((res.statusCode == 200 || res.statusCode == 204) && mounted) {
+      _showSuccess('Contenu supprimé ✅');
+      _fetch();
+    }
+  }
+
+  void _showSuccess(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      backgroundColor: const Color(0xFF10B981),
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ));
   }
 
   Future<void> _deleteChatMessage(String msgId) async {
@@ -633,21 +835,40 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
     );
     if (result == null) return;
 
-    final File? imageFile = result['imageFile'] as File?;
-    if (imageFile != null) {
-      final request = http.MultipartRequest('POST',
-        Uri.parse('$_baseUrl/api/activities/${widget.activityId}/content'));
+    final Uint8List? imageBytes = result['imageBytes'] as Uint8List?;
+    final String?   imageName  = result['imageName']  as String?;
+
+    if (imageBytes != null && imageName != null) {
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$_baseUrl/api/activities/${widget.activityId}/content'),
+      );
       request.headers['Authorization'] = 'Bearer ${await _tok()}';
       request.fields['title'] = result['title'] ?? '';
       request.fields['body']  = result['body']  ?? '';
       request.fields['type']  = result['type']  ?? '';
-      request.files.add(await http.MultipartFile.fromPath('image', imageFile.path));
-      await request.send();
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'image',
+          imageBytes,
+          filename: imageName,
+          contentType: MediaType('image', _mimeSubtype(imageName)),
+        ),
+      );
+      final streamed = await request.send();
+      debugPrint('[addContent] status: ${streamed.statusCode}');
     } else {
       await http.post(
         Uri.parse('$_baseUrl/api/activities/${widget.activityId}/content'),
-        headers: {'Authorization': 'Bearer ${await _tok()}', 'Content-Type': 'application/json'},
-        body: jsonEncode({'title': result['title'], 'body': result['body'], 'type': result['type']}),
+        headers: {
+          'Authorization': 'Bearer ${await _tok()}',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'title': result['title'],
+          'body':  result['body'],
+          'type':  result['type'],
+        }),
       );
     }
     _fetch();
@@ -768,10 +989,24 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
           : TabBarView(
               controller: _tabCtrl,
               children: [
+                // ✅ _ContentTab avec les nouveaux paramètres
                 _ContentTab(
-                  content: content, onAdd: _addContent,
-                  onLike: _likeContent, onComment: _commentContent,
-                  rose: _rose, violet: _violet),
+                  content: content,
+                  onAdd: _addContent,
+                  onLike: _likeContent,
+                  onComment: _commentContent,
+                  onEdit: (id) {
+                    final item = content.firstWhere(
+                      (c) => c['id'].toString() == id,
+                      orElse: () => <String, dynamic>{});
+                    if (item.isNotEmpty) _editContent(id, item as Map<String, dynamic>);
+                  },
+                  onDelete: _deleteContent,
+                  currentUserId: _currentUserId,
+                  isGroupAdmin: _isGroupAdmin,
+                  rose: _rose,
+                  violet: _violet,
+                ),
                 _MembersTab(
                   members: members,
                   isGroupAdmin: _isGroupAdmin,
@@ -846,12 +1081,25 @@ class _ContentTab extends StatelessWidget {
   final VoidCallback onAdd;
   final Function(String) onLike;
   final Function(String) onComment;
+  final Function(String) onEdit;       // ✅ nouveau
+  final Function(String) onDelete;     // ✅ nouveau
+  final String currentUserId;          // ✅ nouveau
+  final bool isGroupAdmin;             // ✅ nouveau
   final Color rose;
   final Color violet;
+
   const _ContentTab({
-    required this.content, required this.onAdd,
-    required this.onLike,  required this.onComment,
-    required this.rose,    required this.violet});
+    required this.content,
+    required this.onAdd,
+    required this.onLike,
+    required this.onComment,
+    required this.onEdit,
+    required this.onDelete,
+    required this.currentUserId,
+    required this.isGroupAdmin,
+    required this.rose,
+    required this.violet,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -889,10 +1137,14 @@ class _ContentTab extends StatelessWidget {
             itemCount: content.length,
             separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (_, i) => _PostCard(
-              item: content[i],
+              item: content[i] as Map<String, dynamic>,
               rose: rose,
-              onLike: () => onLike(content[i]['id'].toString()),
+              currentUserId: currentUserId,          // ✅
+              isGroupAdmin: isGroupAdmin,             // ✅
+              onLike:    () => onLike(content[i]['id'].toString()),
               onComment: () => onComment(content[i]['id'].toString()),
+              onEdit:    () => onEdit(content[i]['id'].toString()),    // ✅
+              onDelete:  () => onDelete(content[i]['id'].toString()),  // ✅
             ),
           )),
     ]));
@@ -904,13 +1156,34 @@ class _PostCard extends StatelessWidget {
   final Map<String, dynamic> item;
   final VoidCallback onLike;
   final VoidCallback onComment;
+  final VoidCallback onEdit;       // ✅ nouveau
+  final VoidCallback onDelete;     // ✅ nouveau
+  final String currentUserId;      // ✅ nouveau
+  final bool isGroupAdmin;         // ✅ nouveau
   final Color rose;
-  const _PostCard({required this.item, required this.onLike, required this.onComment, required this.rose});
+
+  const _PostCard({
+    required this.item,
+    required this.onLike,
+    required this.onComment,
+    required this.onEdit,
+    required this.onDelete,
+    required this.currentUserId,
+    required this.isGroupAdmin,
+    required this.rose,
+  });
 
   @override
   Widget build(BuildContext context) {
     final comments = List<dynamic>.from(item['comments'] ?? []);
     final liked    = item['likedByMe'] == true;
+    final rawUrl   = item['imageUrl']?.toString() ?? '';
+    final imageUrl = rawUrl.replaceFirst('localhost', '127.0.0.1');
+
+    // ✅ L'auteur peut modifier ET supprimer ; l'admin peut seulement supprimer
+    final isAuthor  = item['userId']?.toString() == currentUserId;
+    final canManage = isAuthor || isGroupAdmin;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white, borderRadius: BorderRadius.circular(18),
@@ -919,7 +1192,9 @@ class _PostCard extends StatelessWidget {
           offset: const Offset(0, 3))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Padding(padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+
+        // ── En-tête avec menu ⋮ ─────────────────────────────────────────
+        Padding(padding: const EdgeInsets.fromLTRB(14, 14, 8, 0),
           child: Row(children: [
             _avatar(item['username']),
             const SizedBox(width: 10),
@@ -929,13 +1204,75 @@ class _PostCard extends StatelessWidget {
               Text(_fmtDate(item['createdAt']),
                 style: TextStyle(color: _slate.withOpacity(0.5), fontSize: 11)),
             ])),
+            // Badge type
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: rose.withOpacity(0.08), borderRadius: BorderRadius.circular(8)),
               child: Text(item['type'] ?? '',
                 style: TextStyle(fontSize: 10, color: rose, fontWeight: FontWeight.w600))),
+            // ✅ Badge "modifié"
+            if (item['edited'] == true) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                decoration: BoxDecoration(
+                  color: _slate.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(6)),
+                child: Text('modifié',
+                  style: TextStyle(fontSize: 9, color: _slate.withOpacity(0.6)))),
+            ],
+            // ✅ Menu contextuel — visible si auteur ou admin groupe
+            if (canManage)
+              PopupMenuButton<String>(
+                icon: Icon(Icons.more_vert_rounded,
+                  color: _slate.withOpacity(0.5), size: 20),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                elevation: 4,
+                color: Colors.white,
+                onSelected: (v) {
+                  if (v == 'edit')   onEdit();
+                  if (v == 'delete') onDelete();
+                },
+                itemBuilder: (_) => [
+                  // ✅ Modifier : uniquement pour l'auteur
+                  if (isAuthor)
+                    PopupMenuItem<String>(
+                      value: 'edit',
+                      child: Row(children: [
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: rose.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8)),
+                          child: Icon(Icons.edit_outlined, size: 14, color: rose)),
+                        const SizedBox(width: 10),
+                        const Text('Modifier',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                      ]),
+                    ),
+                  // ✅ Supprimer : auteur OU admin groupe
+                  PopupMenuItem<String>(
+                    value: 'delete',
+                    child: Row(children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8)),
+                        child: const Icon(Icons.delete_outline_rounded,
+                          size: 14, color: Colors.red)),
+                      const SizedBox(width: 10),
+                      const Text('Supprimer',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500,
+                          color: Colors.red)),
+                    ]),
+                  ),
+                ],
+              ),
           ])),
+
+        // ── Titre + Corps ─────────────────────────────────────────────────
         Padding(padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(item['title'] ?? '',
@@ -944,11 +1281,27 @@ class _PostCard extends StatelessWidget {
             Text(item['body'] ?? '',
               style: TextStyle(fontSize: 13, color: _slate.withOpacity(0.8), height: 1.5)),
           ])),
-        if (item['imageUrl'] != null && item['imageUrl'].toString().isNotEmpty)
-          Padding(padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
-            child: ClipRRect(borderRadius: BorderRadius.circular(12),
-              child: Image.network(item['imageUrl'], width: double.infinity,
-                fit: BoxFit.cover, errorBuilder: (_, __, ___) => const SizedBox()))),
+
+        // ── Image ────────────────────────────────────────────────────────
+        if (imageUrl.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                imageUrl,
+                width: double.infinity,
+                height: 220,
+                fit: BoxFit.cover,
+                errorBuilder: (_, err, __) {
+                  debugPrint('[image] erreur: $err — url: $imageUrl');
+                  return const SizedBox();
+                },
+              ),
+            ),
+          ),
+
+        // ── Actions like / comment ────────────────────────────────────────
         Padding(padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
           child: Row(children: [
             GestureDetector(
@@ -976,9 +1329,12 @@ class _PostCard extends StatelessWidget {
                     color: _slate.withOpacity(0.5)),
                   const SizedBox(width: 5),
                   Text('${comments.length}', style: TextStyle(
-                    fontSize: 12, color: _slate.withOpacity(0.5), fontWeight: FontWeight.w600)),
+                    fontSize: 12, color: _slate.withOpacity(0.5),
+                    fontWeight: FontWeight.w600)),
                 ]))),
           ])),
+
+        // ── Commentaires ──────────────────────────────────────────────────
         if (comments.isNotEmpty)
           Container(
             margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
@@ -1263,13 +1619,21 @@ class _AddContentDialog extends StatefulWidget {
 class _AddContentDialogState extends State<_AddContentDialog> {
   final _titleCtrl = TextEditingController();
   final _bodyCtrl  = TextEditingController();
-  File?  _imageFile;
+
+  Uint8List? _imageBytes;
+  String?    _imageName;
   String _type = 'Recette';
 
   Future<void> _pickImage() async {
     final picked = await ImagePicker().pickImage(
       source: ImageSource.gallery, imageQuality: 80);
-    if (picked != null) setState(() => _imageFile = File(picked.path));
+    if (picked != null) {
+      final bytes = await picked.readAsBytes();
+      setState(() {
+        _imageBytes = bytes;
+        _imageName  = picked.name;
+      });
+    }
   }
 
   @override
@@ -1301,20 +1665,29 @@ class _AddContentDialogState extends State<_AddContentDialog> {
           GestureDetector(
             onTap: _pickImage,
             child: Container(
-              height: _imageFile != null ? null : 80,
+              height: _imageBytes != null ? null : 80,
               decoration: BoxDecoration(
                 color: _snow, borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: _imageFile != null ? widget.rose : _border,
-                  width: _imageFile != null ? 1.5 : 1)),
-              child: _imageFile != null
+                  color: _imageBytes != null ? widget.rose : _border,
+                  width: _imageBytes != null ? 1.5 : 1)),
+              child: _imageBytes != null
                 ? Stack(children: [
-                    ClipRRect(borderRadius: BorderRadius.circular(11),
-                      child: Image.file(_imageFile!,
-                        width: double.infinity, height: 140, fit: BoxFit.cover)),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(11),
+                      child: Image.memory(
+                        _imageBytes!,
+                        width: double.infinity,
+                        height: 140,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
                     Positioned(top: 6, right: 6,
                       child: GestureDetector(
-                        onTap: () => setState(() => _imageFile = null),
+                        onTap: () => setState(() {
+                          _imageBytes = null;
+                          _imageName  = null;
+                        }),
                         child: Container(
                           padding: const EdgeInsets.all(4),
                           decoration: const BoxDecoration(
@@ -1358,10 +1731,11 @@ class _AddContentDialogState extends State<_AddContentDialog> {
               onPressed: () {
                 if (_titleCtrl.text.isEmpty || _bodyCtrl.text.isEmpty) return;
                 Navigator.pop(context, {
-                  'title':     _titleCtrl.text.trim(),
-                  'body':      _bodyCtrl.text.trim(),
-                  'type':      _type,
-                  'imageFile': _imageFile,
+                  'title':      _titleCtrl.text.trim(),
+                  'body':       _bodyCtrl.text.trim(),
+                  'type':       _type,
+                  'imageBytes': _imageBytes,
+                  'imageName':  _imageName,
                 });
               },
               style: ElevatedButton.styleFrom(

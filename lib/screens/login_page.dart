@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wejoy/screens/service/admin_api_service.dart';
 import 'package:wejoy/screens/service/api_service.dart';
 import 'package:wejoy/screens/admin/admin_shell.dart';
@@ -1192,9 +1193,12 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
           )
           .timeout(const Duration(seconds: 10));
       final data = jsonDecode(response.body);
+      debugPrint('LOGIN RESPONSE: ${response.body}');
       ModernLoadingOverlay.hide();
       if (response.statusCode == 200) {
         await _apiService.saveToken(data['token']);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_id', data['user']?['_id']?.toString() ?? data['userId']?.toString() ?? '');
         _showToast(
             title: "Connecté !",
             message: "Bon retour sur WeJoy 👋",

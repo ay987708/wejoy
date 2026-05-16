@@ -11,7 +11,6 @@ class ApiService {
   ApiService._internal();
 
   String? _token;
-
   // ─── Gestion du token ─────────────────────────────────────────────────────
   Future<String?> getToken() async {
     if (_token != null) return _token;
@@ -88,7 +87,12 @@ class ApiService {
       ).timeout(const Duration(seconds: 10));
       final data = _handleResponse(response);
       if (data['token'] != null) await saveToken(data['token']);
-      return data;
+      if (data['user']?['_id'] != null) {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setString('user_id', data['user']['_id'].toString());
+}
+
+return data;
     } catch (e) {
       throw ApiException(statusCode: 0, message: 'Impossible de contacter le serveur');
     }
