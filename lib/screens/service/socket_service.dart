@@ -6,8 +6,11 @@ class SocketService {
   SocketService._internal();
 
   IO.Socket? socket;
-   static String _baseUrl = 'http://10.0.2.2:5000';
+static const String _baseUrl = 'http://localhost:5000';
 
+
+
+  
   void connect() {
     if (socket != null && socket!.connected) return;
     socket = IO.io(
@@ -25,6 +28,9 @@ class SocketService {
     socket!.onDisconnect((_) => print('🔴 Socket déconnecté'));
     socket!.onConnectError((d) => print('❌ Erreur connexion: $d'));
     socket!.onError((d) => print('❌ Erreur socket: $d'));
+  }
+ void emit(String event, [dynamic data]) {
+    socket?.emit(event, data);
   }
 
   // ─── XO ───────────────────────────────────────────────

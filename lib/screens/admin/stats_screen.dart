@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
-const String _baseUrl = 'http://10.0.2.2:5000';
+const String _baseUrl = 'http://localhost:5000';
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
   @override

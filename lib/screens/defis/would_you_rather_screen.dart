@@ -9,7 +9,7 @@ class WouldYouRatherScreen extends StatefulWidget {
     super.key,
     required this.roomId,
     required this.playerName,
-    required this.isHost,
+    required this.isHost, required List<dynamic> initialPlayers,
   });
   @override
   State<WouldYouRatherScreen> createState() => _WouldYouRatherScreenState();

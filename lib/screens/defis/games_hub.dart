@@ -14,17 +14,17 @@ class GamesHub extends StatefulWidget {
 }
 
 class _GamesHubState extends State<GamesHub> {
-  static const _bg       = Color(0xFFFDF6FF);
-  static const _card     = Color(0xFFFFFFFF);
-  static const _cardTint = Color(0xFFF8F0FF);
-  static const _pink     = Color(0xFFEC4899);
-  static const _violet   = Color(0xFF8B5CF6);
-  static const _textDark = Color(0xFF1E1B2E);
-  static const _textMid  = Color(0xFF6B7280);
-  static const _textLight= Color(0xFFB0A8C0);
-  static const _amber    = Color(0xFFF59E0B);
-  static const _teal     = Color(0xFF0D9488);
-  static const _coral    = Color(0xFFF43F5E);
+  static const _bg        = Color(0xFFFDF6FF);
+  static const _card      = Color(0xFFFFFFFF);
+  static const _cardTint  = Color(0xFFF8F0FF);
+  static const _pink      = Color(0xFFEC4899);
+  static const _violet    = Color(0xFF8B5CF6);
+  static const _textDark  = Color(0xFF1E1B2E);
+  static const _textMid   = Color(0xFF6B7280);
+  static const _textLight = Color(0xFFB0A8C0);
+  static const _amber     = Color(0xFFF59E0B);
+  static const _teal      = Color(0xFF0D9488);
+  static const _coral     = Color(0xFFF43F5E);
 
   String _playerName = 'Joueur';
 
@@ -40,8 +40,16 @@ class _GamesHubState extends State<GamesHub> {
     setState(() => _playerName = prefs.getString('username') ?? 'Joueur');
   }
 
-  void _openLobby(String game, String title, Color color,
-      Widget Function(String roomId, bool isHost) builder) {
+  // ─────────────────────────────────────────────────────────
+  //  _openLobby — FIX : on écoute lobby_update en premier
+  //  et on le transmet via initialPlayers à l'écran cible
+  // ─────────────────────────────────────────────────────────
+  void _openLobby(
+    String game,
+    String title,
+    Color color,
+    Widget Function(String roomId, bool isHost, List<dynamic> initialPlayers) builder,
+  ) {
     final codeCtrl = TextEditingController();
     bool creating  = false;
 
@@ -59,7 +67,8 @@ class _GamesHubState extends State<GamesHub> {
             bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
           ),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(width: 40, height: 4,
+            Container(
+              width: 40, height: 4,
               decoration: BoxDecoration(
                 color: _textLight.withOpacity(0.4),
                 borderRadius: BorderRadius.circular(2))),
@@ -70,41 +79,73 @@ class _GamesHubState extends State<GamesHub> {
             const Text('Joue avec tes amis en temps réel',
               style: TextStyle(fontSize: 13, color: _textMid)),
             const SizedBox(height: 28),
+
+            // ── Créer une partie ──────────────────────────
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: creating ? null : () {
                   setModal(() => creating = true);
-                  Navigator.pop(ctx);
+                  Navigator.pop(ctx); // ferme le bottom sheet
+
                   final socket = SocketService();
-                  socket.createGameRoom(game, _playerName);
-                  void handler(dynamic data) {
+
+                  // ✅ FIX : on prépare une liste qui sera
+                  // remplie par lobby_update AVANT la navigation
+                  final List<dynamic> initialPlayers = [];
+
+                  // Écoute lobby_update en premier (il arrive
+                  // juste après game_room_created côté backend)
+                  void lobbyHandler(dynamic data) {
+                    final players = data['players'] ?? [];
+                    initialPlayers
+                      ..clear()
+                      ..addAll(players);
+                  }
+                  socket.on('lobby_update', lobbyHandler);
+
+                  // Écoute game_room_created pour naviguer
+                  void roomHandler(dynamic data) {
                     socket.off('game_room_created');
+                    // On enlève notre handler temporaire —
+                    // l'écran cible va re-écouter lobby_update
+                    socket.off('lobby_update');
+
                     final roomId = data['roomId']?.toString() ?? '';
                     if (!mounted) return;
+
                     Navigator.push(context, MaterialPageRoute(
-                      builder: (_) => builder(roomId, true)));
+                      builder: (_) => builder(roomId, true, initialPlayers)));
                   }
-                  socket.on('game_room_created', handler);
+                  socket.on('game_room_created', roomHandler);
+
+                  // Émet la création (déclenche lobby_update
+                  // puis game_room_created côté serveur)
+                  socket.createGameRoom(game, _playerName);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: color, foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
                   elevation: 0),
                 child: const Text('Créer une partie',
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
               ),
             ),
+
             const SizedBox(height: 16),
             Row(children: [
               Expanded(child: Divider(color: _textLight.withOpacity(0.3))),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 14),
-                child: Text('ou rejoindre', style: TextStyle(color: _textLight, fontSize: 12))),
+                child: Text('ou rejoindre',
+                  style: TextStyle(color: _textLight, fontSize: 12))),
               Expanded(child: Divider(color: _textLight.withOpacity(0.3))),
             ]),
             const SizedBox(height: 16),
+
+            // ── Rejoindre ─────────────────────────────────
             TextField(
               controller: codeCtrl,
               textCapitalization: TextCapitalization.characters,
@@ -114,14 +155,18 @@ class _GamesHubState extends State<GamesHub> {
                 letterSpacing: 5, color: _textDark),
               decoration: InputDecoration(
                 hintText: 'CODE',
-                hintStyle: const TextStyle(fontSize: 16, letterSpacing: 3, color: _textLight),
+                hintStyle: const TextStyle(
+                  fontSize: 16, letterSpacing: 3, color: _textLight),
                 filled: true, fillColor: _cardTint,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide(color: color.withOpacity(0.6), width: 1.5)),
-                contentPadding: const EdgeInsets.symmetric(vertical: 18)),
+                  borderSide: BorderSide(
+                    color: color.withOpacity(0.6), width: 1.5)),
+                contentPadding:
+                  const EdgeInsets.symmetric(vertical: 18)),
             ),
             const SizedBox(height: 12),
             SizedBox(
@@ -131,17 +176,22 @@ class _GamesHubState extends State<GamesHub> {
                   final code = codeCtrl.text.trim().toUpperCase();
                   if (code.isEmpty) return;
                   Navigator.pop(ctx);
+
                   final socket = SocketService();
-                  socket.joinGameRoom(code, _playerName);
+
                   void handler(dynamic data) {
-                    socket.off('game_room_joined'); socket.off('error');
+                    socket.off('game_room_joined');
+                    socket.off('error');
                     final roomId = data['roomId']?.toString() ?? '';
                     if (!mounted) return;
+                    // Pour rejoindre, initialPlayers = []
+                    // → lobby_update arrivera dans l'écran cible
                     Navigator.push(context, MaterialPageRoute(
-                      builder: (_) => builder(roomId, false)));
+                      builder: (_) => builder(roomId, false, [])));
                   }
                   void errHandler(dynamic data) {
-                    socket.off('game_room_joined'); socket.off('error');
+                    socket.off('game_room_joined');
+                    socket.off('error');
                     if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                       content: Text(data['message'] ?? 'Erreur'),
@@ -149,12 +199,15 @@ class _GamesHubState extends State<GamesHub> {
                   }
                   socket.on('game_room_joined', handler);
                   socket.on('error', errHandler);
+                  socket.joinGameRoom(code, _playerName);
                 },
                 style: OutlinedButton.styleFrom(
                   foregroundColor: color,
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  side: BorderSide(color: color.withOpacity(0.5), width: 1.5),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                  side: BorderSide(
+                    color: color.withOpacity(0.5), width: 1.5),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14))),
                 child: const Text('Rejoindre',
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
               ),
@@ -167,12 +220,21 @@ class _GamesHubState extends State<GamesHub> {
 
   void _goToXO() =>
       Navigator.push(context, MaterialPageRoute(builder: (_) => const HomeScreen()));
-  void _goToMemory() => _openLobby('memory', 'Memory 🃏', _violet, (r, h) =>
-      MemoryLobbyScreen(roomId: r, playerName: _playerName, isHost: h));
-  void _goToQuiz() => _openLobby('quiz', 'Quiz 🧠', _teal, (r, h) =>
-      QuizScreen(roomId: r, playerName: _playerName, isHost: h));
-  void _goToWyr() => _openLobby('wyr', 'Ce que je préfère 💬', _coral, (r, h) =>
-      WouldYouRatherScreen(roomId: r, playerName: _playerName, isHost: h));
+
+  void _goToMemory() => _openLobby(
+    'memory', 'Memory 🃏', _violet,
+    (r, h, init) => MemoryLobbyScreen(
+      roomId: r, playerName: _playerName, isHost: h, initialPlayers: init));
+
+  void _goToQuiz() => _openLobby(
+    'quiz', 'Quiz 🧠', _teal,
+    (r, h, init) => QuizScreen(
+      roomId: r, playerName: _playerName, isHost: h, initialPlayers: init));
+
+  void _goToWyr() => _openLobby(
+    'wyr', 'Ce que je préfère 💬', _coral,
+    (r, h, init) => WouldYouRatherScreen(
+      roomId: r, playerName: _playerName, isHost: h, initialPlayers: init));
 
   @override
   Widget build(BuildContext context) {
@@ -192,7 +254,8 @@ class _GamesHubState extends State<GamesHub> {
                       colors: [Color(0xFF8B5CF6), Color(0xFFEC4899)],
                     ).createShader(b),
                     child: const Text('Défis', style: TextStyle(
-                      fontSize: 26, fontWeight: FontWeight.w800, color: Colors.white)),
+                      fontSize: 26, fontWeight: FontWeight.w800,
+                      color: Colors.white)),
                   ),
                   const SizedBox(width: 8),
                   const Text('🎮', style: TextStyle(fontSize: 22)),
@@ -209,7 +272,8 @@ class _GamesHubState extends State<GamesHub> {
                   border: Border.all(color: _violet.withOpacity(0.2)),
                 ),
                 child: Row(children: [
-                  Container(width: 7, height: 7,
+                  Container(
+                    width: 7, height: 7,
                     decoration: const BoxDecoration(
                       color: Color(0xFF10B981), shape: BoxShape.circle)),
                   const SizedBox(width: 6),
@@ -239,13 +303,13 @@ class _GamesHubState extends State<GamesHub> {
                 fontSize: 11, fontWeight: FontWeight.w700,
                 color: _textLight, letterSpacing: 1.8)),
               const Spacer(),
-              Text('${4} jeux', style: const TextStyle(
+              const Text('4 jeux', style: TextStyle(
                 fontSize: 11, color: _textLight, fontWeight: FontWeight.w500)),
             ]),
 
             const SizedBox(height: 14),
 
-            // ── Grille avec dégradés ──
+            // ── Grille ──
             GridView.count(
               crossAxisCount: 2,
               crossAxisSpacing: 12, mainAxisSpacing: 12,
@@ -254,41 +318,33 @@ class _GamesHubState extends State<GamesHub> {
               physics: const NeverScrollableScrollPhysics(),
               children: [
                 _GameCard(
-                  emoji: '✕',
-                  title: 'Jeu XO',
+                  emoji: '✕', title: 'Jeu XO',
                   description: 'Morpion classique contre un ami en ligne.',
                   gradientColors: const [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                  tag: '2 joueurs',
-                  tagIcon: '⚡',
-                  onTap: _goToXO,
+                  tag: '2 joueurs', tagIcon: '⚡', onTap: _goToXO,
                 ),
                 _GameCard(
-                  emoji: '⚡',
-                  title: 'Action ou Vérité',
+                  emoji: '⚡', title: 'Action ou Vérité',
                   description: 'Défis et questions entre amis.',
                   gradientColors: const [Color(0xFFEC4899), Color(0xFFF97316)],
-                  tag: '2–4 joueurs',
-                  tagIcon: '🔥',
-                  onTap: () => _openLobby('tod', 'Action ou Vérité ⚡', _pink, (r, h) =>
-                      TruthOrDareScreen(roomId: r, playerName: _playerName, isHost: h)),
+                  tag: '2–4 joueurs', tagIcon: '🔥',
+                  onTap: () => _openLobby(
+                    'tod', 'Action ou Vérité ⚡', _pink,
+                    (r, h, init) => TruthOrDareScreen(
+                      roomId: r, playerName: _playerName,
+                      isHost: h, initialPlayers: init)),
                 ),
                 _GameCard(
-                  emoji: '🧠',
-                  title: 'Quiz Bien-être',
+                  emoji: '🧠', title: 'Quiz Bien-être',
                   description: 'Testez vos connaissances sur la santé et le bien-être !',
                   gradientColors: const [Color(0xFF0D9488), Color(0xFF06B6D4)],
-                  tag: '2–4 joueurs',
-                  tagIcon: '🏆',
-                  onTap: _goToQuiz,
+                  tag: '2–4 joueurs', tagIcon: '🏆', onTap: _goToQuiz,
                 ),
                 _GameCard(
-                  emoji: '💬',
-                  title: 'Ce que je préfère',
+                  emoji: '💬', title: 'Ce que je préfère',
                   description: 'Vote et découvre ce que pensent tes amis.',
                   gradientColors: const [Color(0xFFF43F5E), Color(0xFFEC4899)],
-                  tag: 'Nouveau',
-                  tagIcon: '✨',
-                  onTap: _goToWyr,
+                  tag: 'Nouveau', tagIcon: '✨', onTap: _goToWyr,
                 ),
               ],
             ),
@@ -303,7 +359,8 @@ class _GamesHubState extends State<GamesHub> {
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: _pink.withOpacity(0.12)),
                 boxShadow: [BoxShadow(
-                  color: _pink.withOpacity(0.06), blurRadius: 16, offset: const Offset(0, 4))],
+                  color: _pink.withOpacity(0.06),
+                  blurRadius: 16, offset: const Offset(0, 4))],
               ),
               child: Row(children: [
                 Container(
@@ -316,7 +373,8 @@ class _GamesHubState extends State<GamesHub> {
                   child: const Text('🔥', style: TextStyle(fontSize: 22)),
                 ),
                 const SizedBox(width: 14),
-                const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Expanded(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text('Streak actif', style: TextStyle(
                     fontSize: 14, fontWeight: FontWeight.w700, color: _textDark)),
                   SizedBox(height: 2),
@@ -343,7 +401,7 @@ class _GamesHubState extends State<GamesHub> {
 }
 
 // ═══════════════════════════════════════════════════════════
-//  HERO BANNER — remplace _FeaturedCard
+//  HERO BANNER
 // ═══════════════════════════════════════════════════════════
 
 class _HeroBanner extends StatelessWidget {
@@ -360,18 +418,14 @@ class _HeroBanner extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             colors: [Color(0xFF7C3AED), Color(0xFFEC4899), Color(0xFFFF6B9D)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF8B5CF6).withOpacity(0.35),
-              blurRadius: 24, offset: const Offset(0, 10)),
-          ],
+          boxShadow: [BoxShadow(
+            color: const Color(0xFF8B5CF6).withOpacity(0.35),
+            blurRadius: 24, offset: const Offset(0, 10))],
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // Tag
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
@@ -386,25 +440,21 @@ class _HeroBanner extends StatelessWidget {
             color: Colors.white, height: 1.2)),
           const SizedBox(height: 8),
           Text('Choisis un jeu et défie tes proches en temps réel.',
-            style: TextStyle(fontSize: 13, color: Colors.white.withOpacity(0.85), height: 1.4)),
+            style: TextStyle(
+              fontSize: 13, color: Colors.white.withOpacity(0.85), height: 1.4)),
           const SizedBox(height: 20),
-          // Bouton Memory vedette
-          Row(children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Row(mainAxisSize: MainAxisSize.min, children: const [
-                Text('🃏', style: TextStyle(fontSize: 16)),
-                SizedBox(width: 8),
-                Text('Jouer au Memory', style: TextStyle(
-                  fontSize: 13, fontWeight: FontWeight.w700,
-                  color: Color(0xFF7C3AED))),
-              ]),
-            ),
-          ]),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white, borderRadius: BorderRadius.circular(14)),
+            child: const Row(mainAxisSize: MainAxisSize.min, children: [
+              Text('🃏', style: TextStyle(fontSize: 16)),
+              SizedBox(width: 8),
+              Text('Jouer au Memory', style: TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w700,
+                color: Color(0xFF7C3AED))),
+            ]),
+          ),
         ]),
       ),
     );
@@ -412,7 +462,7 @@ class _HeroBanner extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════
-//  GAME CARD — avec dégradé comme dans l'app
+//  GAME CARD
 // ═══════════════════════════════════════════════════════════
 
 class _GameCard extends StatelessWidget {
@@ -434,41 +484,27 @@ class _GameCard extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: gradientColors,
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin: Alignment.topLeft, end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: gradientColors[0].withOpacity(0.3),
-              blurRadius: 12, offset: const Offset(0, 6)),
-          ],
+          boxShadow: [BoxShadow(
+            color: gradientColors[0].withOpacity(0.3),
+            blurRadius: 12, offset: const Offset(0, 6))],
         ),
         child: Stack(children: [
-          // Cercle décoratif en haut à droite
-          Positioned(
-            top: -20, right: -20,
-            child: Container(
-              width: 100, height: 100,
+          Positioned(top: -20, right: -20,
+            child: Container(width: 100, height: 100,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.08)),
-            ),
-          ),
-          Positioned(
-            top: 10, right: 10,
-            child: Container(
-              width: 60, height: 60,
+                color: Colors.white.withOpacity(0.08)))),
+          Positioned(top: 10, right: 10,
+            child: Container(width: 60, height: 60,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.08)),
-            ),
-          ),
-          // Contenu
+                color: Colors.white.withOpacity(0.08)))),
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              // Emoji grand
               Text(emoji, style: const TextStyle(fontSize: 32)),
               const SizedBox(height: 10),
               Text(title, style: const TextStyle(
@@ -477,7 +513,6 @@ class _GameCard extends StatelessWidget {
               Expanded(child: Text(description, style: TextStyle(
                 fontSize: 11, color: Colors.white.withOpacity(0.8), height: 1.4))),
               const SizedBox(height: 10),
-              // Tag + bouton play
               Row(children: [
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -507,14 +542,17 @@ class _GameCard extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════
-//  MEMORY LOBBY
+//  MEMORY LOBBY — avec initialPlayers
 // ═══════════════════════════════════════════════════════════
 
 class MemoryLobbyScreen extends StatefulWidget {
   final String roomId, playerName;
   final bool isHost;
+  final List<dynamic> initialPlayers;   // ✅ AJOUT
+
   const MemoryLobbyScreen({
-    super.key, required this.roomId, required this.playerName, required this.isHost,
+    super.key, required this.roomId, required this.playerName,
+    required this.isHost, this.initialPlayers = const [],
   });
   @override
   State<MemoryLobbyScreen> createState() => _MemoryLobbyScreenState();
@@ -522,7 +560,7 @@ class MemoryLobbyScreen extends StatefulWidget {
 
 class _MemoryLobbyScreenState extends State<MemoryLobbyScreen> {
   final SocketService _socket = SocketService();
-  List<dynamic> _players = [];
+  late List<dynamic> _players;  // ✅ initialisé depuis widget
 
   static const _bg        = Color(0xFFFDF6FF);
   static const _card      = Color(0xFFFFFFFF);
@@ -535,6 +573,9 @@ class _MemoryLobbyScreenState extends State<MemoryLobbyScreen> {
   @override
   void initState() {
     super.initState();
+    // ✅ On part avec les players déjà capturés dans GamesHub
+    _players = List<dynamic>.from(widget.initialPlayers);
+
     _socket.on('lobby_update', (data) {
       if (!mounted) return;
       setState(() => _players = data['players'] ?? []);
@@ -555,7 +596,8 @@ class _MemoryLobbyScreenState extends State<MemoryLobbyScreen> {
     super.dispose();
   }
 
-  void _startGame() => _socket.socket?.emit('memory_start', {'roomId': widget.roomId});
+  void _startGame() =>
+      _socket.socket?.emit('memory_start', {'roomId': widget.roomId});
 
   @override
   Widget build(BuildContext context) {
@@ -565,10 +607,13 @@ class _MemoryLobbyScreenState extends State<MemoryLobbyScreen> {
         backgroundColor: _bg, elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new, color: _textMid, size: 16),
-          onPressed: () { _socket.leaveGameRoom(widget.roomId); Navigator.pop(context); },
+          onPressed: () {
+            _socket.leaveGameRoom(widget.roomId);
+            Navigator.pop(context);
+          },
         ),
-        title: const Text('Memory 🃏',
-          style: TextStyle(color: _textDark, fontWeight: FontWeight.w700, fontSize: 18)),
+        title: const Text('Memory 🃏', style: TextStyle(
+          color: _textDark, fontWeight: FontWeight.w700, fontSize: 18)),
       ),
       body: Padding(
         padding: const EdgeInsets.all(24),
@@ -579,16 +624,19 @@ class _MemoryLobbyScreenState extends State<MemoryLobbyScreen> {
               color: _card, borderRadius: BorderRadius.circular(18),
               border: Border.all(color: _violet.withOpacity(0.15)),
               boxShadow: [BoxShadow(
-                color: _violet.withOpacity(0.07), blurRadius: 16, offset: const Offset(0, 4))],
+                color: _violet.withOpacity(0.07),
+                blurRadius: 16, offset: const Offset(0, 4))],
             ),
             child: Column(children: [
-              const Text('Code de la salle', style: TextStyle(fontSize: 13, color: _textMid)),
+              const Text('Code de la salle',
+                style: TextStyle(fontSize: 13, color: _textMid)),
               const SizedBox(height: 8),
               ShaderMask(
                 shaderCallback: (b) => const LinearGradient(
                   colors: [_violet, _pink]).createShader(b),
                 child: Text(widget.roomId, style: const TextStyle(
-                  fontSize: 36, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 6)),
+                  fontSize: 36, fontWeight: FontWeight.w800,
+                  color: Colors.white, letterSpacing: 6)),
               ),
               const SizedBox(height: 4),
               const Text('Partage ce code avec tes amis',
@@ -598,7 +646,8 @@ class _MemoryLobbyScreenState extends State<MemoryLobbyScreen> {
 
           const SizedBox(height: 20),
           const Text('JOUEURS', style: TextStyle(
-            fontSize: 11, fontWeight: FontWeight.w600, color: _textLight, letterSpacing: 1.5)),
+            fontSize: 11, fontWeight: FontWeight.w600,
+            color: _textLight, letterSpacing: 1.5)),
           const SizedBox(height: 12),
 
           ..._players.map((p) => Container(
@@ -608,7 +657,8 @@ class _MemoryLobbyScreenState extends State<MemoryLobbyScreen> {
               color: _card, borderRadius: BorderRadius.circular(14),
               border: Border.all(color: _violet.withOpacity(0.1)),
               boxShadow: [BoxShadow(
-                color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2))],
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 8, offset: const Offset(0, 2))],
             ),
             child: Row(children: [
               Container(
@@ -618,11 +668,15 @@ class _MemoryLobbyScreenState extends State<MemoryLobbyScreen> {
                   borderRadius: BorderRadius.circular(10)),
                 alignment: Alignment.center,
                 child: Text((p['name'] ?? '?')[0].toUpperCase(),
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
+                  style: const TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.w700,
+                    color: Colors.white)),
               ),
               const SizedBox(width: 12),
               Expanded(child: Text(p['name'] ?? '',
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: _textDark))),
+                style: const TextStyle(
+                  fontSize: 14, fontWeight: FontWeight.w600,
+                  color: _textDark))),
               if (p['name'] == widget.playerName)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -650,14 +704,17 @@ class _MemoryLobbyScreenState extends State<MemoryLobbyScreen> {
                   backgroundColor: Colors.transparent,
                   foregroundColor: Colors.white,
                   padding: EdgeInsets.zero,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
                   elevation: 0,
                   disabledBackgroundColor: const Color(0xFFE5E7EB)),
                 child: Ink(
                   decoration: BoxDecoration(
                     gradient: _players.length >= 2
-                        ? const LinearGradient(colors: [_violet, _pink]) : null,
-                    color: _players.length < 2 ? const Color(0xFFE5E7EB) : null,
+                        ? const LinearGradient(colors: [_violet, _pink])
+                        : null,
+                    color: _players.length < 2
+                        ? const Color(0xFFE5E7EB) : null,
                     borderRadius: BorderRadius.circular(14)),
                   child: Container(
                     alignment: Alignment.center,
