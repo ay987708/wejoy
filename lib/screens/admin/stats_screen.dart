@@ -5,8 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
-const String _base = 'http://localhost:5000';
-
+const String _baseUrl = 'http://localhost:5000';
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
   @override
@@ -36,7 +35,7 @@ class _StatsScreenState extends State<StatsScreen> with TickerProviderStateMixin
     try {
       final p = await SharedPreferences.getInstance();
       final t = p.getString('token') ?? '';
-      final res = await http.get(Uri.parse('$_base/api/stats'),
+      final res = await http.get(Uri.parse('$_baseUrl/api/stats'),
         headers: {'Authorization': 'Bearer $t'});
       if (res.statusCode == 200) {
         setState(() => _data = jsonDecode(res.body));

@@ -14,10 +14,10 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _loading = false;
   String? _error;
 
-  static const _bg = Color(0xFF0F172A);
-  static const _card = Color(0xFF1E293B);
-  static const _xCol = Color(0xFF3B82F6);
-  static const _oCol = Color(0xFFF97316);
+  static const _bg = Color.fromARGB(255, 243, 212, 234);
+  static const _card = Color.fromARGB(255, 187, 8, 148);
+  static const _xCol = Color.fromARGB(255, 215, 59, 246);
+  static const _oCol = Color.fromARGB(255, 238, 121, 218);
 
   @override
   void initState() {

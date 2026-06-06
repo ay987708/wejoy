@@ -329,6 +329,24 @@ class _JournalTimelinePageState extends State<JournalTimelinePage> {
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
         child: Row(
           children: [
+            GestureDetector(
+        onTap: () => Navigator.pop(context),
+        child: Container(
+          width: 44, height: 44,
+          decoration: BoxDecoration(
+            color: _white,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [BoxShadow(
+              color: Colors.black.withOpacity(0.07),
+              blurRadius: 8, offset: const Offset(0, 2))],
+          ),
+          child: const Icon(
+            Icons.chevron_left_rounded,
+            size: 24,
+            color: _text,
+          ),
+        ),
+      ),
             const Text('Mes entrées',
                 style: TextStyle(
                     fontSize: 22, fontWeight: FontWeight.w800, color: _text)),

@@ -3,13 +3,15 @@ import 'package:provider/provider.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:wejoy/theme/theme_provider.dart';
 
-const String _serverUrl = 'http://localhost:5000';
+const String _baseUrl = 'http://localhost:5000';
+
 
 // ── Couleurs statiques (non thématiques) ─────────────────────────────────
 const Color _ink     = Color(0xFF111827);
 const Color _bgPage  = Color(0xFFF6F7FB);
 const Color _indigo  = Color(0xFF6366F1);
 const Color _green   = Color(0xFF22C55E);
+
 
 // ══════════════════════════════════════════════════════════════
 // PAGE PRINCIPALE
@@ -313,7 +315,7 @@ class _GameLobbyPageState extends State<GameLobbyPage> with SingleTickerProvider
   }
 
   void _connect() {
-    socket = IO.io(_serverUrl, IO.OptionBuilder()
+    socket = IO.io(_baseUrl, IO.OptionBuilder()
         .setTransports(['websocket', 'polling'])
         .disableAutoConnect()
         .enableReconnection()

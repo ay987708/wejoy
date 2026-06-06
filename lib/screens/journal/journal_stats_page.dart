@@ -2,7 +2,6 @@
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:http/http.dart' as http;
 import 'package:wejoy/screens/service/api_service.dart';
 
@@ -116,12 +115,12 @@ class JournalStats {
 
 // ─── Service ──────────────────────────────────────────────────────────────────
 class JournalStatsService {
-  static const _base = 'http://localhost:5000/api/journal';
+  static const String _baseUrl = 'http://localhost:5000/api/journal';
 
   static Future<JournalStats> fetch() async {
     final token = await ApiService().getToken();
     final res = await http.get(
-      Uri.parse('$_base/stats'),
+      Uri.parse('$_baseUrl/stats'),
       headers: {
         'Content-Type': 'application/json',
         if (token != null) 'Authorization': 'Bearer $token',
@@ -274,21 +273,6 @@ class _JournalStatsPageState extends State<JournalStatsPage>
   );
 }
 
-
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-    decoration: BoxDecoration(
-      gradient: const LinearGradient(colors: [Color(0xFFFFE8D9), Color(0xFFFFF0F5)]),
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: _rose.withOpacity(0.25)),
-      boxShadow: [BoxShadow(color: _rose.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 4))],
-    ),
-  
-  );
-
-
 // ─── Cercle Wellness animé ────────────────────────────────────────────────────
 class _WellnessCircle extends StatefulWidget {
   final int    score;
@@ -334,7 +318,7 @@ class _WellnessCircleState extends State<_WellnessCircle>
   @override
   Widget build(BuildContext context) {
     final safe = widget.score.clamp(0, 100);
-
+// cercle du stat
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
       decoration: BoxDecoration(
@@ -655,7 +639,7 @@ class _WeekBarsState extends State<_WeekBars>
                               ),
                             ),
                           // Sticker aligné à la fin de la barre
-                          if (active)
+                          if (active && barW >= 40)
                             Positioned(
                               left: (barW - 38).clamp(0.0, barMaxW - 38),
                               top: 1,

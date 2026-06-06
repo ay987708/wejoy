@@ -9,29 +9,29 @@ import 'package:wejoy/screens/auth/otp_reset_screen.dart';
 import 'dart:convert';
 import 'package:wejoy/screens/home_page.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 
-// ── IMPORTANT : changez selon votre environnement ────────────────────────────
+// ── Changez selon votre environnement ─────────────────────────────────────────
 // Émulateur Android  → http://10.0.2.2:5000
-// Appareil physique  → http://192.168.X.X:5000  (votre IP locale)
-// Web / iOS simulateur → http://localhost:5000
-// Pour Flutter Web
+// Appareil physique  → http://192.168.X.X:5000
+// Web / iOS          → http://localhost:5000
 const String _baseUrl = 'http://localhost:5000';
 
-// ══════════════════════════════════════════════════════════════════════════════
-// MODERN TOAST
-// ══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════════════════════════════
 
 enum ToastType { success, error, warning, info }
 
 class ModernToast {
   static OverlayEntry? _currentEntry;
 
-  static void show(BuildContext context,
-      {required String title,
-      required String message,
-      required ToastType type,
-      Duration duration = const Duration(seconds: 3)}) {
+  static void show(
+    BuildContext context, {
+    required String title,
+    required String message,
+    required ToastType type,
+    Duration duration = const Duration(seconds: 3),
+  }) {
     _currentEntry?.remove();
     final overlay = Overlay.of(context);
     late OverlayEntry entry;
@@ -57,12 +57,15 @@ class _ToastWidget extends StatefulWidget {
   final ToastType type;
   final VoidCallback onDismiss;
   final Duration duration;
-  const _ToastWidget(
-      {required this.title,
-      required this.message,
-      required this.type,
-      required this.onDismiss,
-      required this.duration});
+
+  const _ToastWidget({
+    required this.title,
+    required this.message,
+    required this.type,
+    required this.onDismiss,
+    required this.duration,
+  });
+
   @override
   State<_ToastWidget> createState() => _ToastWidgetState();
 }
@@ -81,8 +84,8 @@ class _ToastWidgetState extends State<_ToastWidget>
     _slideAnimation =
         Tween<Offset>(begin: const Offset(0, 1.5), end: Offset.zero).animate(
             CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
-    _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(
-        parent: _controller, curve: const Interval(0, 0.5)));
+    _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
+        CurvedAnimation(parent: _controller, curve: const Interval(0, 0.5)));
     _controller.forward();
     Future.delayed(widget.duration, () {
       if (mounted) _dismiss();
@@ -197,8 +200,7 @@ class _ToastWidgetState extends State<_ToastWidget>
                                     const SizedBox(height: 3),
                                     Text(widget.message,
                                         style: TextStyle(
-                                            color:
-                                                Colors.white.withOpacity(0.7),
+                                            color: Colors.white.withOpacity(0.7),
                                             fontSize: 13,
                                             height: 1.4)),
                                   ]),
@@ -211,8 +213,7 @@ class _ToastWidgetState extends State<_ToastWidget>
                           ]),
                     ),
                     _ProgressBar(
-                        duration: widget.duration,
-                        color: config.progressColor),
+                        duration: widget.duration, color: config.progressColor),
                   ]),
                 ),
               ),
@@ -227,7 +228,9 @@ class _ToastWidgetState extends State<_ToastWidget>
 class _ProgressBar extends StatefulWidget {
   final Duration duration;
   final Color color;
+
   const _ProgressBar({required this.duration, required this.color});
+
   @override
   State<_ProgressBar> createState() => _ProgressBarState();
 }
@@ -235,6 +238,7 @@ class _ProgressBar extends StatefulWidget {
 class _ProgressBarState extends State<_ProgressBar>
     with SingleTickerProviderStateMixin {
   late AnimationController _ctrl;
+
   @override
   void initState() {
     super.initState();
@@ -263,25 +267,26 @@ class _ProgressBarState extends State<_ProgressBar>
 class _ToastConfig {
   final IconData icon;
   final Color iconColor, accentColor, bgColor, progressColor;
-  _ToastConfig(
-      {required this.icon,
-      required this.iconColor,
-      required this.accentColor,
-      required this.bgColor,
-      required this.progressColor});
+
+  _ToastConfig({
+    required this.icon,
+    required this.iconColor,
+    required this.accentColor,
+    required this.bgColor,
+    required this.progressColor,
+  });
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 // LOADING OVERLAY
-// ══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 
 class ModernLoadingOverlay {
   static OverlayEntry? _entry;
 
   static void show(BuildContext context, {String? message}) {
     _entry?.remove();
-    _entry =
-        OverlayEntry(builder: (_) => _ModernLoadingWidget(message: message));
+    _entry = OverlayEntry(builder: (_) => _ModernLoadingWidget(message: message));
     Overlay.of(context).insert(_entry!);
   }
 
@@ -293,7 +298,9 @@ class ModernLoadingOverlay {
 
 class _ModernLoadingWidget extends StatelessWidget {
   final String? message;
+
   const _ModernLoadingWidget({this.message});
+
   @override
   Widget build(BuildContext context) => Positioned.fill(
         child: Container(
@@ -306,8 +313,7 @@ class _ModernLoadingWidget extends StatelessWidget {
               builder: (context, double value, child) =>
                   Transform.scale(scale: value, child: child),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
                 decoration: BoxDecoration(
                   color: const Color(0xFF1C1C1E),
                   borderRadius: BorderRadius.circular(24),
@@ -327,8 +333,7 @@ class _ModernLoadingWidget extends StatelessWidget {
                               AlwaysStoppedAnimation(Color(0xFFAB47BC))),
                       Center(
                           child: Icon(Icons.favorite,
-                              color:
-                                  const Color(0xFFAB47BC).withOpacity(0.5),
+                              color: const Color(0xFFAB47BC).withOpacity(0.5),
                               size: 20)),
                     ]),
                   ),
@@ -348,9 +353,9 @@ class _ModernLoadingWidget extends StatelessWidget {
       );
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 // MODERN TEXT FIELD
-// ══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 
 class ModernTextField extends StatefulWidget {
   final TextEditingController controller;
@@ -362,16 +367,17 @@ class ModernTextField extends StatefulWidget {
   final TextInputType keyboardType;
   final Color? accentColor;
 
-  const ModernTextField(
-      {super.key,
-      required this.controller,
-      required this.hint,
-      required this.icon,
-      this.obscure = false,
-      this.toggleObscure,
-      this.validator,
-      this.keyboardType = TextInputType.text,
-      this.accentColor});
+  const ModernTextField({
+    super.key,
+    required this.controller,
+    required this.hint,
+    required this.icon,
+    this.obscure = false,
+    this.toggleObscure,
+    this.validator,
+    this.keyboardType = TextInputType.text,
+    this.accentColor,
+  });
 
   @override
   State<ModernTextField> createState() => _ModernTextFieldState();
@@ -381,6 +387,7 @@ class _ModernTextFieldState extends State<ModernTextField> {
   late FocusNode _focusNode;
   bool _hasError = false;
   String? _errorText;
+
   Color get accent => widget.accentColor ?? const Color(0xFFE91E8C);
 
   @override
@@ -441,8 +448,7 @@ class _ModernTextFieldState extends State<ModernTextField> {
                       widget.obscure
                           ? Icons.visibility_off_outlined
                           : Icons.visibility_outlined,
-                      color:
-                          _focusNode.hasFocus ? accent : Colors.grey.shade400,
+                      color: _focusNode.hasFocus ? accent : Colors.grey.shade400,
                       size: 20,
                     ),
                     onPressed: widget.toggleObscure)
@@ -456,8 +462,7 @@ class _ModernTextFieldState extends State<ModernTextField> {
                 borderSide: BorderSide.none),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide:
-                  BorderSide(color: Colors.grey.shade200, width: 1.5),
+              borderSide: BorderSide(color: Colors.grey.shade200, width: 1.5),
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
@@ -465,8 +470,7 @@ class _ModernTextFieldState extends State<ModernTextField> {
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide:
-                  const BorderSide(color: Color(0xFFFF5252), width: 2),
+              borderSide: const BorderSide(color: Color(0xFFFF5252), width: 2),
             ),
           ),
         ),
@@ -484,9 +488,9 @@ class _ModernTextFieldState extends State<ModernTextField> {
   }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 // VALIDATORS
-// ══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 
 class Validators {
   static String? validateEmail(String? v) {
@@ -515,17 +519,19 @@ class Validators {
   }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// SOCIAL AUTH SERVICE
-// ══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
+// SOCIAL AUTH SERVICE — Google uniquement
+// ═══════════════════════════════════════════════════════════════════════════════
 
 class SocialAuthService {
   static Future<void> signInWithGoogle(BuildContext context) async {
     try {
       ModernLoadingOverlay.show(context, message: "Connexion Google...");
-     final GoogleSignIn googleSignIn = GoogleSignIn(clientId: '1029141415382-bamssovk0894aq5us0qoaobt6gh3b7eb.apps.googleusercontent.com',
-  scopes: ['email'],
-);
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        clientId:
+            '1029141415382-bamssovk0894aq5us0qoaobt6gh3b7eb.apps.googleusercontent.com',
+        scopes: ['email'],
+      );
       final account = await googleSignIn.signIn();
       if (account == null) {
         ModernLoadingOverlay.hide();
@@ -560,50 +566,11 @@ class SocialAuthService {
           type: ToastType.error);
     }
   }
-
-  static Future<void> signInWithFacebook(BuildContext context) async {
-    try {
-      ModernLoadingOverlay.show(context, message: "Connexion Facebook...");
-      final result = await FacebookAuth.instance.login();
-      if (result.status != LoginStatus.success) {
-        ModernLoadingOverlay.hide();
-        return;
-      }
-      final userData = await FacebookAuth.instance.getUserData();
-      final response = await http.post(
-        Uri.parse('$_baseUrl/api/auth/social-login'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'provider': 'facebook',
-          'name': userData['name'],
-          'email': userData['email'],
-          'avatar': userData['picture']['data']['url'],
-          'socialId': userData['id'],
-        }),
-      );
-      final data = jsonDecode(response.body);
-      ModernLoadingOverlay.hide();
-      if (response.statusCode == 200) {
-        final api = ApiService();
-        await api.saveToken(data['token']);
-        Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (_) => const HomePage()));
-      } else {
-        throw Exception(data['message']);
-      }
-    } catch (e) {
-      ModernLoadingOverlay.hide();
-      ModernToast.show(context,
-          title: "Erreur Facebook",
-          message: e.toString(),
-          type: ToastType.error);
-    }
-  }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 // LEFT PANEL
-// ══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 
 class _LeftPanel extends StatelessWidget {
   const _LeftPanel();
@@ -647,12 +614,27 @@ class _LeftPanel extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // ── Logo ──────────────────────────────────────────
                       Row(children: [
                         Image.asset(
                           'assets/images/logowejoy.png',
                           width: 80,
-                          height:80 ,
+                          height: 80,
+                          // FIX: fallback si l'image est absente
+                          errorBuilder: (context, error, stackTrace) =>
+                              Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF7B2FBE), Color(0xFFE91E8C)],
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: const Icon(Icons.favorite_rounded,
+                                color: Colors.white, size: 38),
                           ),
+                        ),
                         const SizedBox(width: 10),
                         RichText(
                           text: const TextSpan(children: [
@@ -808,11 +790,13 @@ class _GroupIllustration extends StatelessWidget {
 class _PersonAvatar extends StatelessWidget {
   final Color bodyColor, skinColor;
   final double width, height;
-  const _PersonAvatar(
-      {required this.bodyColor,
-      required this.skinColor,
-      required this.width,
-      required this.height});
+
+  const _PersonAvatar({
+    required this.bodyColor,
+    required this.skinColor,
+    required this.width,
+    required this.height,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -859,7 +843,9 @@ class _PersonAvatar extends StatelessWidget {
 class _IconBubble extends StatelessWidget {
   final IconData icon;
   final Color color;
+
   const _IconBubble({required this.icon, required this.color});
+
   @override
   Widget build(BuildContext context) => Container(
         width: 36,
@@ -878,22 +864,24 @@ class _IconBubble extends StatelessWidget {
       );
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 // ADMIN LOGIN DIALOG
-// ══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 
 class _AdminLoginDialog extends StatefulWidget {
   final AdminApiService adminApiService;
+
   const _AdminLoginDialog({required this.adminApiService});
+
   @override
   State<_AdminLoginDialog> createState() => _AdminLoginDialogState();
 }
 
 class _AdminLoginDialogState extends State<_AdminLoginDialog> {
   final _emailCtrl = TextEditingController();
-  final _passCtrl  = TextEditingController();
-  bool  _obscure   = true;
-  bool  _loading   = false;
+  final _passCtrl = TextEditingController();
+  bool _obscure = true;
+  bool _loading = false;
   String? _errorMsg;
 
   @override
@@ -904,7 +892,7 @@ class _AdminLoginDialogState extends State<_AdminLoginDialog> {
   }
 
   Future<void> _login() async {
-    final email    = _emailCtrl.text.trim();
+    final email = _emailCtrl.text.trim();
     final password = _passCtrl.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
@@ -912,7 +900,10 @@ class _AdminLoginDialogState extends State<_AdminLoginDialog> {
       return;
     }
 
-    setState(() { _loading = true; _errorMsg = null; });
+    setState(() {
+      _loading = true;
+      _errorMsg = null;
+    });
 
     try {
       final ok = await widget.adminApiService.login(email, password);
@@ -925,15 +916,16 @@ class _AdminLoginDialogState extends State<_AdminLoginDialog> {
         );
       } else {
         setState(() {
-          _loading  = false;
+          _loading = false;
           _errorMsg = 'Email ou mot de passe incorrect.';
         });
       }
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _loading  = false;
-        _errorMsg = 'Impossible de contacter le serveur.\nVérifiez votre connexion.';
+        _loading = false;
+        _errorMsg =
+            'Impossible de contacter le serveur.\nVérifiez votre connexion.';
       });
     }
   }
@@ -959,7 +951,8 @@ class _AdminLoginDialogState extends State<_AdminLoginDialog> {
         ),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Container(
-            width: 64, height: 64,
+            width: 64,
+            height: 64,
             decoration: BoxDecoration(
               gradient: const LinearGradient(
                   colors: [Color(0xFF7B2FBE), Color(0xFFE91E8C)]),
@@ -984,7 +977,6 @@ class _AdminLoginDialogState extends State<_AdminLoginDialog> {
           Text('Connectez-vous à votre compte admin',
               style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
           const SizedBox(height: 24),
-
           if (_errorMsg != null) ...[
             Container(
               width: double.infinity,
@@ -1010,7 +1002,6 @@ class _AdminLoginDialogState extends State<_AdminLoginDialog> {
             ),
             const SizedBox(height: 16),
           ],
-
           ModernTextField(
             controller: _emailCtrl,
             hint: 'Email administrateur',
@@ -1028,9 +1019,9 @@ class _AdminLoginDialogState extends State<_AdminLoginDialog> {
             accentColor: const Color(0xFFA855F7),
           ),
           const SizedBox(height: 24),
-
           SizedBox(
-            width: double.infinity, height: 52,
+            width: double.infinity,
+            height: 52,
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
@@ -1053,7 +1044,8 @@ class _AdminLoginDialogState extends State<_AdminLoginDialog> {
                 ),
                 child: _loading
                     ? const SizedBox(
-                        width: 22, height: 22,
+                        width: 22,
+                        height: 22,
                         child: CircularProgressIndicator(
                             strokeWidth: 2.5,
                             valueColor: AlwaysStoppedAnimation(Colors.white)))
@@ -1077,28 +1069,29 @@ class _AdminLoginDialogState extends State<_AdminLoginDialog> {
   }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 // LOGIN PAGE
-// ══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
+
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
-  bool isLogin         = true;
+  bool isLogin = true;
   bool obscurePassword = true;
-  bool obscureConfirm  = true;
-  bool isLoading       = false;
-  bool _rememberMe     = false;
+  bool obscureConfirm = true;
+  bool isLoading = false;
+  bool _rememberMe = false;
 
   final fullnameController = TextEditingController();
-  final emailController    = TextEditingController();
+  final emailController = TextEditingController();
   final passwordController = TextEditingController();
-  final confirmController  = TextEditingController();
-  final _formKey           = GlobalKey<FormState>();
+  final confirmController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
   final ApiService _apiService = ApiService();
 
   @override
@@ -1124,10 +1117,11 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  void _showToast(
-          {required String title,
-          required String message,
-          required ToastType type}) =>
+  void _showToast({
+    required String title,
+    required String message,
+    required ToastType type,
+  }) =>
       ModernToast.show(context, title: title, message: message, type: type);
 
   void validateAndSubmit() async {
@@ -1224,7 +1218,6 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     }
   }
 
-  // ── MOT DE PASSE OUBLIÉ ─────────────────────────────────────────────────────
   Future<void> forgotPassword() async {
     final email = emailController.text.trim();
 
@@ -1263,10 +1256,8 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
             type: ToastType.success);
         await Future.delayed(const Duration(milliseconds: 600));
         if (!mounted) return;
-        Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (_) => OtpResetScreen(email: email)));
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => OtpResetScreen(email: email)));
       } else {
         _showToast(
             title: "Erreur",
@@ -1294,7 +1285,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     );
   }
 
-  // ── RIGHT PANEL: LOGIN ───────────────────────────────────────────────────────
+  // ── RIGHT PANEL: LOGIN ────────────────────────────────────────────────────
 
   Widget _buildLoginPanel() {
     return SingleChildScrollView(
@@ -1334,29 +1325,28 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                 setState(() => obscurePassword = !obscurePassword),
             validator: Validators.validatePassword,
           ),
-
           const SizedBox(height: 10),
+
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(children: [
                 SizedBox(
-                  width: 20, height: 20,
+                  width: 20,
+                  height: 20,
                   child: Checkbox(
                     value: _rememberMe,
-                    onChanged: (v) =>
-                        setState(() => _rememberMe = v ?? false),
+                    onChanged: (v) => setState(() => _rememberMe = v ?? false),
                     activeColor: const Color(0xFFE91E8C),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(4)),
-                    side: BorderSide(
-                        color: Colors.grey.shade300, width: 1.5),
+                    side: BorderSide(color: Colors.grey.shade300, width: 1.5),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Text('Remember me',
-                    style: TextStyle(
-                        fontSize: 13, color: Colors.grey.shade600)),
+                    style:
+                        TextStyle(fontSize: 13, color: Colors.grey.shade600)),
               ]),
               GestureDetector(
                 onTap: forgotPassword,
@@ -1374,9 +1364,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
               label: 'Login',
               onPressed: isLoading ? null : validateAndSubmit,
               isLoading: isLoading),
-
           const SizedBox(height: 24),
 
+          // ── Séparateur ─────────────────────────────────────────────────
           Row(children: [
             const Expanded(child: Divider()),
             Padding(
@@ -1391,6 +1381,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
           ]),
           const SizedBox(height: 20),
 
+          // ── Google uniquement ──────────────────────────────────────────
           _SocialLoginButton(
             icon: Icons.g_mobiledata,
             iconColor: const Color(0xFFDB4437),
@@ -1399,6 +1390,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
           ),
           const SizedBox(height: 28),
 
+          // ── Admin ──────────────────────────────────────────────────────
           GestureDetector(
             onTap: _openAdminLoginDialog,
             child: Container(
@@ -1418,7 +1410,8 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
               ),
               child: Row(children: [
                 Container(
-                  width: 42, height: 42,
+                  width: 42,
+                  height: 42,
                   decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(12)),
@@ -1437,12 +1430,13 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                 color: Colors.white)),
                         SizedBox(height: 2),
                         Text('Accédez à votre tableau de bord',
-                            style: TextStyle(
-                                fontSize: 12, color: Colors.white70)),
+                            style:
+                                TextStyle(fontSize: 12, color: Colors.white70)),
                       ]),
                 ),
                 Container(
-                  width: 30, height: 30,
+                  width: 30,
+                  height: 30,
                   decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.15),
                       shape: BoxShape.circle),
@@ -1452,7 +1446,6 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
               ]),
             ),
           ),
-
           const SizedBox(height: 28),
 
           Center(
@@ -1462,8 +1455,8 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                 text: const TextSpan(children: [
                   TextSpan(
                       text: "Don't have an account? ",
-                      style: TextStyle(
-                          color: Color(0xFF6B7280), fontSize: 14)),
+                      style:
+                          TextStyle(color: Color(0xFF6B7280), fontSize: 14)),
                   TextSpan(
                       text: "Sign up",
                       style: TextStyle(
@@ -1479,7 +1472,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     );
   }
 
-  // ── RIGHT PANEL: REGISTER ────────────────────────────────────────────────────
+  // ── RIGHT PANEL: REGISTER ─────────────────────────────────────────────────
 
   Widget _buildRegisterPanel() {
     return SingleChildScrollView(
@@ -1540,17 +1533,15 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
             obscure: obscureConfirm,
             toggleObscure: () =>
                 setState(() => obscureConfirm = !obscureConfirm),
-            validator: (v) => Validators.validateConfirmPassword(
-                v, passwordController.text),
+            validator: (v) =>
+                Validators.validateConfirmPassword(v, passwordController.text),
           ),
-
           const SizedBox(height: 24),
 
           _GradientButton(
               label: 'Create Account',
               onPressed: isLoading ? null : validateAndSubmit,
               isLoading: isLoading),
-
           const SizedBox(height: 20),
 
           Center(
@@ -1560,8 +1551,8 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                 text: const TextSpan(children: [
                   TextSpan(
                       text: "Already have an account? ",
-                      style: TextStyle(
-                          color: Color(0xFF6B7280), fontSize: 14)),
+                      style:
+                          TextStyle(color: Color(0xFF6B7280), fontSize: 14)),
                   TextSpan(
                       text: "Login",
                       style: TextStyle(
@@ -1615,13 +1606,15 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 // SHARED WIDGETS
-// ══════════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════════════════
 
 class _FieldLabel extends StatelessWidget {
   final String text;
+
   const _FieldLabel(this.text);
+
   @override
   Widget build(BuildContext context) => Text(text,
       style: const TextStyle(
@@ -1634,10 +1627,13 @@ class _GradientButton extends StatelessWidget {
   final String label;
   final VoidCallback? onPressed;
   final bool isLoading;
-  const _GradientButton(
-      {required this.label,
-      required this.onPressed,
-      this.isLoading = false});
+
+  const _GradientButton({
+    required this.label,
+    required this.onPressed,
+    this.isLoading = false,
+  });
+
   @override
   Widget build(BuildContext context) => SizedBox(
         width: double.infinity,
@@ -1664,7 +1660,8 @@ class _GradientButton extends StatelessWidget {
             ),
             child: isLoading
                 ? const SizedBox(
-                    width: 22, height: 22,
+                    width: 22,
+                    height: 22,
                     child: CircularProgressIndicator(
                         strokeWidth: 2.5,
                         valueColor: AlwaysStoppedAnimation(Colors.white)))
@@ -1683,11 +1680,14 @@ class _SocialLoginButton extends StatelessWidget {
   final Color iconColor;
   final String label;
   final VoidCallback onPressed;
-  const _SocialLoginButton(
-      {required this.icon,
-      required this.iconColor,
-      required this.label,
-      required this.onPressed});
+
+  const _SocialLoginButton({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.onPressed,
+  });
+
   @override
   Widget build(BuildContext context) => SizedBox(
         width: double.infinity,

@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class AdminApiService extends ChangeNotifier {
   // Change this to your server IP/domain
-  static const String baseUrl = 'http://localhost:5000/api';
+  static const String _baseUrl = 'http://localhost:5000/api';
 
   String? _token;
   Map<String, dynamic>? _admin;
@@ -42,7 +42,7 @@ class AdminApiService extends ChangeNotifier {
   Future<bool> login(String email, String password) async {
     try {
       final res = await http.post(
-        Uri.parse('$baseUrl/auth/admin/login'),
+        Uri.parse('$_baseUrl/auth/admin/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'password': password}),
       );
@@ -74,7 +74,7 @@ class AdminApiService extends ChangeNotifier {
   // DASHBOARD
   Future<Map<String, dynamic>> getDashboard() async {
     final h = await _getHeaders();
-    final res = await http.get(Uri.parse('$baseUrl/dashboard'), headers: h);
+    final res = await http.get(Uri.parse('$_baseUrl/dashboard'), headers: h);
     if (res.statusCode == 200) return jsonDecode(res.body);
     throw Exception('Erreur dashboard: ${res.statusCode}');
   }
@@ -82,7 +82,7 @@ class AdminApiService extends ChangeNotifier {
   // USERS
   Future<List<dynamic>> getUsers({String? search}) async {
     final h = await _getHeaders();
-    final url = search != null ? '$baseUrl/users?search=$search' : '$baseUrl/users';
+    final url = search != null ? '$_baseUrl/users?search=$search' : '$_baseUrl/users';
     final res = await http.get(Uri.parse(url), headers: h);
     if (res.statusCode == 200) return jsonDecode(res.body);
     throw Exception('Erreur utilisateurs: ${res.statusCode}');
@@ -90,92 +90,92 @@ class AdminApiService extends ChangeNotifier {
 
   Future<Map<String, dynamic>> createUser(Map<String, dynamic> data) async {
     final h = await _getHeaders();
-    final res = await http.post(Uri.parse('$baseUrl/users'), headers: h, body: jsonEncode(data));
+    final res = await http.post(Uri.parse('$_baseUrl/users'), headers: h, body: jsonEncode(data));
     if (res.statusCode == 201) return jsonDecode(res.body);
     throw Exception('Erreur création utilisateur: ${res.statusCode}');
   }
 
   Future<Map<String, dynamic>> updateUser(String id, Map<String, dynamic> data) async {
     final h = await _getHeaders();
-    final res = await http.put(Uri.parse('$baseUrl/users/$id'), headers: h, body: jsonEncode(data));
+    final res = await http.put(Uri.parse('$_baseUrl/users/$id'), headers: h, body: jsonEncode(data));
     if (res.statusCode == 200) return jsonDecode(res.body);
     throw Exception('Erreur modification utilisateur: ${res.statusCode}');
   }
 
   Future<void> deleteUser(String id) async {
     final h = await _getHeaders();
-    final res = await http.delete(Uri.parse('$baseUrl/users/$id'), headers: h);
+    final res = await http.delete(Uri.parse('$_baseUrl/users/$id'), headers: h);
     if (res.statusCode != 200) throw Exception('Erreur suppression: ${res.statusCode}');
   }
 
   Future<void> toggleBlockUser(String id) async {
     final h = await _getHeaders();
-    await http.put(Uri.parse('$baseUrl/users/$id/block'), headers: h);
+    await http.put(Uri.parse('$_baseUrl/users/$id/block'), headers: h);
   }
 
   // SERVICES
   Future<List<dynamic>> getServices() async {
     final h = await _getHeaders();
-    final res = await http.get(Uri.parse('$baseUrl/services'), headers: h);
+    final res = await http.get(Uri.parse('$_baseUrl/services'), headers: h);
     if (res.statusCode == 200) return jsonDecode(res.body);
     throw Exception('Erreur services: ${res.statusCode} — ${res.body}');
   }
 
   Future<Map<String, dynamic>> createService(Map<String, dynamic> data) async {
     final h = await _getHeaders();
-    final res = await http.post(Uri.parse('$baseUrl/services'), headers: h, body: jsonEncode(data));
+    final res = await http.post(Uri.parse('$_baseUrl/services'), headers: h, body: jsonEncode(data));
     if (res.statusCode == 201) return jsonDecode(res.body);
     throw Exception('Erreur création service: ${res.statusCode} — ${res.body}');
   }
 
   Future<Map<String, dynamic>> updateService(String id, Map<String, dynamic> data) async {
     final h = await _getHeaders();
-    final res = await http.put(Uri.parse('$baseUrl/services/$id'), headers: h, body: jsonEncode(data));
+    final res = await http.put(Uri.parse('$_baseUrl/services/$id'), headers: h, body: jsonEncode(data));
     if (res.statusCode == 200) return jsonDecode(res.body);
     throw Exception('Erreur modification service: ${res.statusCode}');
   }
 
   Future<void> deleteService(String id) async {
     final h = await _getHeaders();
-    final res = await http.delete(Uri.parse('$baseUrl/services/$id'), headers: h);
+    final res = await http.delete(Uri.parse('$_baseUrl/services/$id'), headers: h);
     if (res.statusCode != 200) throw Exception('Erreur suppression service: ${res.statusCode}');
   }
 
   // DEMANDES
   Future<Map<String, dynamic>> getDemandes() async {
     final h = await _getHeaders();
-    final res = await http.get(Uri.parse('$baseUrl/demandes'), headers: h);
+    final res = await http.get(Uri.parse('$_baseUrl/demandes'), headers: h);
     if (res.statusCode == 200) return jsonDecode(res.body);
     throw Exception('Erreur demandes: ${res.statusCode}');
   }
 
   Future<void> approuverDemande(String id) async {
     final h = await _getHeaders();
-    await http.put(Uri.parse('$baseUrl/demandes/$id/approuver'), headers: h);
+    await http.put(Uri.parse('$_baseUrl/demandes/$id/approuver'), headers: h);
   }
 
   Future<void> rejeterDemande(String id) async {
     final h = await _getHeaders();
-    await http.put(Uri.parse('$baseUrl/demandes/$id/rejeter'), headers: h);
+    await http.put(Uri.parse('$_baseUrl/demandes/$id/rejeter'), headers: h);
   }
 
   // NOTIFICATIONS ADMIN
   Future<List<dynamic>> getNotifications() async {
     final h = await _getHeaders();
-    final res = await http.get(Uri.parse('$baseUrl/admin/notifications'), headers: h);
+    final res = await http.get(Uri.parse('$_baseUrl/admin/notifications'), headers: h);
     if (res.statusCode == 200) return jsonDecode(res.body);
     throw Exception('Erreur notifications: ${res.statusCode}');
   }
 
   Future<void> sendNotification(Map<String, dynamic> data) async {
     final h = await _getHeaders();
-    await http.post(Uri.parse('$baseUrl/admin/notifications'), headers: h, body: jsonEncode(data));
+    await http.post(Uri.parse('$_baseUrl/admin/notifications'), headers: h, body: jsonEncode(data));
   }
 
   // STATS
   Future<Map<String, dynamic>> getStats() async {
     final h = await _getHeaders();
-    final res = await http.get(Uri.parse('$baseUrl/stats'), headers: h);
+    final res = await http.get(Uri.parse('$_baseUrl/stats'), headers: h);
     if (res.statusCode == 200) return jsonDecode(res.body);
     throw Exception('Erreur stats: ${res.statusCode}');
   }
@@ -183,7 +183,7 @@ class AdminApiService extends ChangeNotifier {
 Future<void> updateNotification(String id, Map<String, dynamic> data) async {
   final h = await _getHeaders();
   final res = await http.put(
-    Uri.parse('$baseUrl/admin/notifications/$id'),
+    Uri.parse('$_baseUrl/admin/notifications/$id'),
     headers: h,
     body: jsonEncode(data),
   );
@@ -197,7 +197,7 @@ Future<void> updateNotification(String id, Map<String, dynamic> data) async {
 Future<void> deleteNotification(String id) async {
   final h = await _getHeaders();
   final res = await http.delete(
-    Uri.parse('$baseUrl/admin/notifications/$id'),
+    Uri.parse('$_baseUrl/admin/notifications/$id'),
     headers: h,
   );
 
@@ -210,7 +210,7 @@ Future<void> deleteNotification(String id) async {
   final h = await _getHeaders();
 
   final res = await http.put(
-    Uri.parse('$baseUrl/admin/notifications/mark-all-read'),
+    Uri.parse('$_baseUrl/admin/notifications/mark-all-read'),
     headers: h,
   );
 

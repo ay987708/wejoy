@@ -3,12 +3,13 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+const String _baseUrl = 'http://localhost:5000';
 // ── Même URL que login_page.dart ──────────────────────────────────────────────
 // Émulateur Android  → http://10.0.2.2:5000
 // Appareil physique  → http://192.168.X.X:5000
 // Web / iOS simulateur → http://localhost:5000
 // Pour Flutter Web
-const String _baseUrl = 'http://localhost:5000';
+
 
 class OtpResetScreen extends StatefulWidget {
   final String email;
@@ -27,7 +28,8 @@ class _OtpResetScreenState extends State<OtpResetScreen> {
   bool _obscurePass    = true;
   bool _obscureConfirm = true;
 
-  // ── Compte à rebours pour le renvoi ──────────────────────────────────────
+  // ── Compte à rebours pour le renvoi
+  //button bloqué pendant 60 secondes. ──────────────────────────────────────
   int  _resendCountdown = 60;
   bool _canResend       = false;
   Timer? _timer;
@@ -88,10 +90,10 @@ class _OtpResetScreenState extends State<OtpResetScreen> {
       _showToast("Minimum 6 caractères.", isError: true);
       return;
     }
-
+    
     setState(() => _isLoading = true);
     try {
-      // ✅ Envoie email + otp + newPassword au backend
+      //  Envoie email + otp + newPassword au backend
       final response = await http.post(
         Uri.parse('$_baseUrl/api/auth/reset-password'),
         headers: {'Content-Type': 'application/json'},

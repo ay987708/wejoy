@@ -10,16 +10,13 @@ import 'package:wejoy/theme/theme_provider.dart';
 import 'dart:convert';
 
 const String _baseUrl = 'http://localhost:5000';
-
-// Palette fixe (non thématique)
+const Color _rose   = Color(0xFFD63FBF);
+const Color _violet = Color(0xFF7C3AED);
 const Color _ink    = Color(0xFF0F0F1A);
 const Color _slate  = Color(0xFF64748B);
 const Color _snow   = Color(0xFFF8FAFC);
 const Color _border = Color(0xFFEEEEF5);
 
-// ═══════════════════════════════════════════════════════════════════════════
-// HELPER : détecter le bon sous-type MIME selon l'extension du fichier
-// ═══════════════════════════════════════════════════════════════════════════
 String _mimeSubtype(String? name) {
   final ext = (name ?? '').split('.').last.toLowerCase();
   switch (ext) {
@@ -30,9 +27,7 @@ String _mimeSubtype(String? name) {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
 // PAGE LISTE
-// ═══════════════════════════════════════════════════════════════════════════
 class ActivitiePage extends StatefulWidget {
   const ActivitiePage({super.key});
   @override
@@ -71,10 +66,9 @@ class _ActivitiePageState extends State<ActivitiePage>
   }
 
   Future<void> _fetch() async {
+    // activ l'indicateur de chargement.
     setState(() => _loading = true);
-    
     try {
-      
       final res = await http.get(
         Uri.parse('$_baseUrl/api/activities'),
         headers: {'Authorization': 'Bearer ${await _tok()}'},
@@ -83,6 +77,7 @@ class _ActivitiePageState extends State<ActivitiePage>
         setState(() { _activities = jsonDecode(res.body); _filter(); });
       }
     } catch (e) { debugPrint('$e'); }
+    //arrête l'indicateur de chargement.
     finally { setState(() => _loading = false); }
   }
 
@@ -112,14 +107,16 @@ class _ActivitiePageState extends State<ActivitiePage>
     final res = await http.post(
       Uri.parse('$_baseUrl/api/activities'),
       headers: {
+        //token d’authentification
         'Authorization': 'Bearer ${await _tok()}',
+        //format JSON
         'Content-Type': 'application/json',
       },
       body: jsonEncode(result),
     );
     if (res.statusCode == 201 && mounted) {
       _fetch();
-      _showSuccess('Activité créée ! ✅');
+      _showSuccess('Activité créée !');
     }
   }
 
@@ -139,7 +136,6 @@ class _ActivitiePageState extends State<ActivitiePage>
     return Scaffold(
       backgroundColor: _snow,
       body: Column(children: [
-        // ── Header ──────────────────────────────────────────────────────────
         Container(
           color: Colors.white,
           child: Column(children: [
@@ -171,7 +167,6 @@ class _ActivitiePageState extends State<ActivitiePage>
                 ),
               ]),
             ),
-            // Recherche
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Container(
@@ -194,7 +189,6 @@ class _ActivitiePageState extends State<ActivitiePage>
               ),
             ),
             const SizedBox(height: 12),
-            // Catégories
             SizedBox(height: 36, child: ListView.separated(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -222,7 +216,6 @@ class _ActivitiePageState extends State<ActivitiePage>
               },
             )),
             const SizedBox(height: 8),
-            // Tabs
             TabBar(
               controller: _tabController,
               labelColor: _rose,
@@ -239,7 +232,6 @@ class _ActivitiePageState extends State<ActivitiePage>
             ),
           ]),
         ),
-        // ── Grille ──────────────────────────────────────────────────────────
         Expanded(child: _loading
           ? Center(child: CircularProgressIndicator(color: _rose))
           : _filtered.isEmpty
@@ -377,10 +369,7 @@ class _ActivityCard extends StatelessWidget {
         style: const TextStyle(fontSize: 40))));
   }
 }
-
-// ═══════════════════════════════════════════════════════════════════════════
-// PAGE DÉTAIL
-// ═══════════════════════════════════════════════════════════════════════════
+// page détailll
 class ActivityDetailPage extends StatefulWidget {
   final String activityId;
   const ActivityDetailPage({super.key, required this.activityId});
@@ -393,9 +382,10 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
   Map<String, dynamic>? _activity;
   bool _loading        = true;
   bool _isMember       = false;
+  bool _isPending      = false; 
   bool _isGroupAdmin   = false;
   int  _unreadChat     = 0;
-  String _currentUserId = ''; // ✅ ID de l'utilisateur connecté
+  String _currentUserId = '';
 
   Color get _rose   => context.read<ThemeProvider>().color1;
   Color get _violet => context.read<ThemeProvider>().color2;
@@ -418,7 +408,6 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
   Future<void> _fetch() async {
     setState(() => _loading = true);
     try {
-      // ✅ Récupérer l'ID utilisateur connecté
       final prefs = await SharedPreferences.getInstance();
       _currentUserId = prefs.getString('user_id') ?? '';
 
@@ -439,6 +428,7 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
         setState(() {
           _activity     = data;
           _isMember     = data['isMember']     == true;
+          _isPending    = data['isPending']    == true;
           _isGroupAdmin = data['isGroupAdmin'] == true;
           _unreadChat   = unread;
         });
@@ -456,21 +446,118 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
     setState(() => _unreadChat = 0);
   }
 
+  //  MODIFIÉ : gère 3 états — non-membre, en attente, membre
   Future<void> _toggleJoin() async {
-    final rose      = _rose;
-    final isLeaving = _isMember;
+    final rose = _rose;
+
+    // État : en attente → proposer d'annuler
+    if (_isPending) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('Annuler la demande',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _ink)),
+          content: Text('Voulez-vous annuler votre demande d\'adhésion ?',
+            style: TextStyle(fontSize: 13, color: _slate.withOpacity(0.8))),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          actions: [Row(children: [
+            Expanded(child: OutlinedButton(
+              onPressed: () => Navigator.pop(context, false),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: _slate, side: const BorderSide(color: _border),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              child: const Text('Non'))),
+            const SizedBox(width: 10),
+            Expanded(child: ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange[400], foregroundColor: Colors.white,
+                elevation: 0, padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              child: const Text('Annuler la demande',
+                style: TextStyle(fontWeight: FontWeight.w600)))),
+          ])],
+        ),
+      );
+      if (confirmed != true) return;
+
+      final res = await http.post(
+        Uri.parse('$_baseUrl/api/activities/${widget.activityId}/join/cancel'),
+        headers: {'Authorization': 'Bearer ${await _tok()}'},
+      );
+      if (res.statusCode == 200 && mounted) {
+        setState(() => _isPending = false);
+        _showSuccess('Demande annulée');
+      }
+      return;
+    }
+
+    // État : membre → proposer de quitter
+    if (_isMember) {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text('Quitter l\'activité',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _ink)),
+          content: Text('Voulez-vous quitter cette activité ?',
+            style: TextStyle(fontSize: 13, color: _slate.withOpacity(0.8))),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          actions: [Row(children: [
+            Expanded(child: OutlinedButton(
+              onPressed: () => Navigator.pop(context, false),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: _slate, side: const BorderSide(color: _border),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              child: const Text('Annuler'))),
+            const SizedBox(width: 10),
+            Expanded(child: ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red[400], foregroundColor: Colors.white,
+                elevation: 0, padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              child: const Text('Quitter',
+                style: TextStyle(fontWeight: FontWeight.w600)))),
+          ])],
+        ),
+      );
+      if (confirmed != true) return;
+
+      final res = await http.post(
+        Uri.parse('$_baseUrl/api/activities/${widget.activityId}/leave'),
+        headers: {'Authorization': 'Bearer ${await _tok()}'},
+      );
+      if (res.statusCode == 200 && mounted) {
+        setState(() { _isMember = false; _isPending = false; });
+        _fetch();
+      }
+      return;
+    }
+
+    // État : non-membre → envoyer une demande
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          isLeaving ? 'Quitter l\'activité' : 'Rejoindre l\'activité',
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _ink)),
-        content: Text(
-          isLeaving
-            ? 'Voulez-vous quitter cette activité ?'
-            : 'Voulez-vous rejoindre cette activité ?',
-          style: TextStyle(fontSize: 13, color: _slate.withOpacity(0.8))),
+        title: const Text('Rejoindre l\'activité',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _ink)),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            width: 56, height: 56,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: [rose.withOpacity(0.15), _violet.withOpacity(0.15)]),
+              shape: BoxShape.circle),
+            child: Icon(Icons.how_to_reg_outlined, color: rose, size: 28)),
+          const SizedBox(height: 14),
+          Text(
+            'Votre demande sera envoyée à l\'administrateur du groupe qui pourra l\'accepter ou la refuser.',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13, color: _slate.withOpacity(0.8), height: 1.5)),
+        ]),
         actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [Row(children: [
           Expanded(child: OutlinedButton(
@@ -479,29 +566,78 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
               foregroundColor: _slate, side: const BorderSide(color: _border),
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-            child: const Text('Annuler',
-              style: TextStyle(fontWeight: FontWeight.w500)))),
+            child: const Text('Annuler'))),
           const SizedBox(width: 10),
           Expanded(child: ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: isLeaving ? Colors.red[400] : rose,
-              foregroundColor: Colors.white, elevation: 0,
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              backgroundColor: rose, foregroundColor: Colors.white,
+              elevation: 0, padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-            child: Text(isLeaving ? 'Quitter' : 'Rejoindre',
-              style: const TextStyle(fontWeight: FontWeight.w600)))),
+            child: const Text('Envoyer la demande',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)))),
         ])],
       ),
     );
     if (confirmed != true) return;
-    final ep = isLeaving ? 'leave' : 'join';
+
     final res = await http.post(
-      Uri.parse('$_baseUrl/api/activities/${widget.activityId}/$ep'),
+      Uri.parse('$_baseUrl/api/activities/${widget.activityId}/join'),
       headers: {'Authorization': 'Bearer ${await _tok()}'},
     );
-    if (res.statusCode == 200 || res.statusCode == 201) {
-      setState(() => _isMember = !_isMember);
+    if (mounted) {
+      final body = jsonDecode(res.body);
+      if (res.statusCode == 200 && body['isPending'] == true) {
+        setState(() => _isPending = true);
+        _showInfo('Demande envoyée ! En attente de validation');
+      } else if (res.statusCode == 400 && body['isPending'] == true) {
+        setState(() => _isPending = true);
+        _showInfo('Vous avez déjà une demande en attente');
+      }
+    }
+  }
+
+  //  Accepter un membre (admin)
+  Future<void> _approveMember(String userId) async {
+    final res = await http.post(
+      Uri.parse('$_baseUrl/api/activities/${widget.activityId}/join/$userId/approve'),
+      headers: {'Authorization': 'Bearer ${await _tok()}'},
+    );
+    if (res.statusCode == 200 && mounted) {
+      _showSuccess('Membre accepté ');
+      _fetch();
+    }
+  }
+
+  //  Refuser un membre (admin)
+  Future<void> _rejectMember(String userId, String username) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Refuser $username',
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+        content: const Text('La demande de cet utilisateur sera refusée.',
+          style: TextStyle(fontSize: 13)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red[400], foregroundColor: Colors.white, elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+            child: const Text('Refuser')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    final res = await http.post(
+      Uri.parse('$_baseUrl/api/activities/${widget.activityId}/join/$userId/reject'),
+      headers: {'Authorization': 'Bearer ${await _tok()}'},
+    );
+    if (res.statusCode == 200 && mounted) {
+      _showSuccess('Demande refusée');
       _fetch();
     }
   }
@@ -552,7 +688,6 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
     _fetch();
   }
 
-  // ✅ NOUVEAU : Modifier un contenu
   Future<void> _editContent(String contentId, Map<String, dynamic> current) async {
     final rose   = _rose;
     final violet = _violet;
@@ -569,7 +704,6 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
             padding: const EdgeInsets.all(24),
             child: Column(mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start, children: [
-              // ── En-tête
               Row(children: [
                 Container(
                   width: 38, height: 38,
@@ -586,10 +720,8 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
                   onPressed: () => Navigator.pop(ctx)),
               ]),
               const SizedBox(height: 18),
-              // ── Titre
               TextField(
-                controller: titleCtrl,
-                style: const TextStyle(fontSize: 13),
+                controller: titleCtrl, style: const TextStyle(fontSize: 13),
                 decoration: InputDecoration(
                   hintText: 'Titre',
                   hintStyle: TextStyle(color: _slate.withOpacity(0.4), fontSize: 13),
@@ -603,11 +735,8 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
                     borderSide: BorderSide(color: rose, width: 2))),
               ),
               const SizedBox(height: 10),
-              // ── Corps
               TextField(
-                controller: bodyCtrl,
-                maxLines: 4,
-                style: const TextStyle(fontSize: 13),
+                controller: bodyCtrl, maxLines: 4, style: const TextStyle(fontSize: 13),
                 decoration: InputDecoration(
                   hintText: 'Contenu...',
                   hintStyle: TextStyle(color: _slate.withOpacity(0.4), fontSize: 13),
@@ -621,7 +750,6 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
                     borderSide: BorderSide(color: rose, width: 2))),
               ),
               const SizedBox(height: 10),
-              // ── Type
               DropdownButtonFormField<String>(
                 value: type,
                 decoration: InputDecoration(
@@ -637,7 +765,6 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
                 onChanged: (v) => setStateDialog(() => type = v!),
               ),
               const SizedBox(height: 20),
-              // ── Actions
               Row(children: [
                 Expanded(child: OutlinedButton(
                   onPressed: () => Navigator.pop(ctx),
@@ -645,8 +772,7 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
                     foregroundColor: _slate, side: const BorderSide(color: _border),
                     padding: const EdgeInsets.symmetric(vertical: 13),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                  child: const Text('Annuler',
-                    style: TextStyle(fontWeight: FontWeight.w500)))),
+                  child: const Text('Annuler'))),
                 const SizedBox(width: 10),
                 Expanded(child: ElevatedButton(
                   onPressed: () {
@@ -673,10 +799,7 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
     if (result == null) return;
     final res = await http.put(
       Uri.parse('$_baseUrl/api/activities/${widget.activityId}/content/$contentId'),
-      headers: {
-        'Authorization': 'Bearer ${await _tok()}',
-        'Content-Type': 'application/json',
-      },
+      headers: {'Authorization': 'Bearer ${await _tok()}', 'Content-Type': 'application/json'},
       body: jsonEncode(result),
     );
     if ((res.statusCode == 200 || res.statusCode == 201) && mounted) {
@@ -685,7 +808,6 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
     }
   }
 
-  // ✅ NOUVEAU : Supprimer un contenu
   Future<void> _deleteContent(String contentId) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -693,8 +815,7 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('Supprimer ce contenu',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _ink)),
-        content: Text(
-          'Cette action est irréversible.',
+        content: Text('Cette action est irréversible.',
           style: TextStyle(fontSize: 13, color: _slate.withOpacity(0.8))),
         actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [Row(children: [
@@ -704,8 +825,7 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
               foregroundColor: _slate, side: const BorderSide(color: _border),
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-            child: const Text('Annuler',
-              style: TextStyle(fontWeight: FontWeight.w500)))),
+            child: const Text('Annuler'))),
           const SizedBox(width: 10),
           Expanded(child: ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
@@ -738,6 +858,15 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
     ));
   }
 
+  void _showInfo(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(msg),
+      backgroundColor: const Color(0xFFF59E0B),
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ));
+  }
+
   Future<void> _deleteChatMessage(String msgId) async {
     await http.delete(
       Uri.parse('$_baseUrl/api/activities/${widget.activityId}/chat/$msgId'),
@@ -757,14 +886,11 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
           'Ce membre sera retiré de l\'activité et ne pourra plus y participer.',
           style: TextStyle(fontSize: 13)),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red[400], foregroundColor: Colors.white,
-              elevation: 0,
+              backgroundColor: Colors.red[400], foregroundColor: Colors.white, elevation: 0,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
             child: const Text('Bloquer')),
         ],
@@ -847,31 +973,85 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
       request.fields['title'] = result['title'] ?? '';
       request.fields['body']  = result['body']  ?? '';
       request.fields['type']  = result['type']  ?? '';
-      request.files.add(
-        http.MultipartFile.fromBytes(
-          'image',
-          imageBytes,
-          filename: imageName,
-          contentType: MediaType('image', _mimeSubtype(imageName)),
-        ),
-      );
-      final streamed = await request.send();
-      debugPrint('[addContent] status: ${streamed.statusCode}');
+      request.files.add(http.MultipartFile.fromBytes(
+        'image', imageBytes,
+        filename: imageName,
+        contentType: MediaType('image', _mimeSubtype(imageName)),
+      ));
+      await request.send();
     } else {
       await http.post(
         Uri.parse('$_baseUrl/api/activities/${widget.activityId}/content'),
-        headers: {
-          'Authorization': 'Bearer ${await _tok()}',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'title': result['title'],
-          'body':  result['body'],
-          'type':  result['type'],
-        }),
+        headers: {'Authorization': 'Bearer ${await _tok()}', 'Content-Type': 'application/json'},
+        body: jsonEncode({'title': result['title'], 'body': result['body'], 'type': result['type']}),
       );
     }
     _fetch();
+  }
+
+  // ✅ Builder du bouton d'action selon l'état
+  Widget _buildJoinButton() {
+    if (_isMember) {
+      return GestureDetector(
+        onTap: _toggleJoin,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withOpacity(0.3))),
+          child: const Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.person_remove_outlined, color: Colors.white, size: 14),
+            SizedBox(width: 6),
+            Text('Quitter', style: TextStyle(
+              color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+          ]),
+        ),
+      );
+    }
+
+    if (_isPending) {
+      return GestureDetector(
+        onTap: _toggleJoin,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF59E0B).withOpacity(0.9),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withOpacity(0.3))),
+          child: const Row(mainAxisSize: MainAxisSize.min, children: [
+            SizedBox(
+              width: 12, height: 12,
+              child: CircularProgressIndicator(
+                strokeWidth: 1.5, color: Colors.white)),
+            SizedBox(width: 7),
+            Text('En attente', style: TextStyle(
+              color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+          ]),
+        ),
+      );
+    }
+
+    // Non-membre
+    return GestureDetector(
+      onTap: _toggleJoin,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: _rose,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withOpacity(0.3))),
+        child: const Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.person_add_outlined, color: Colors.white, size: 14),
+          SizedBox(width: 6),
+          Text('Rejoindre', style: TextStyle(
+            color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+        ]),
+      ),
+    );
   }
 
   @override
@@ -884,10 +1064,11 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
     if (_activity == null) return const Scaffold(
       body: Center(child: Text('Activité introuvable')));
 
-    final a       = _activity!;
-    final members = List<dynamic>.from(a['members'] ?? []);
-    final content = List<dynamic>.from(a['content'] ?? []);
-    final chat    = List<dynamic>.from(a['chat']    ?? []);
+    final a              = _activity!;
+    final members        = List<dynamic>.from(a['members']        ?? []);
+    final content        = List<dynamic>.from(a['content']        ?? []);
+    final chat           = List<dynamic>.from(a['chat']           ?? []);
+    final pendingMembers = List<dynamic>.from(a['pendingMembers'] ?? []);
 
     return Scaffold(
       backgroundColor: _snow,
@@ -927,35 +1108,48 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
             ]),
           ),
           actions: [
-            if (_isGroupAdmin)
+            if (_isGroupAdmin) ...[
+              // ✅ Badge demandes en attente
+              if (pendingMembers.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8, bottom: 8),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.mark_email_unread_outlined,
+                          color: Colors.white, size: 20),
+                        tooltip: 'Demandes en attente',
+                        onPressed: () => _showPendingSheet(pendingMembers)),
+                      Positioned(
+                        top: 4, right: 4,
+                        child: Container(
+                          width: 16, height: 16,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFF59E0B), shape: BoxShape.circle),
+                          child: Center(
+                            child: Text('${pendingMembers.length}',
+                              style: const TextStyle(
+                                color: Colors.white, fontSize: 9,
+                                fontWeight: FontWeight.w800))))),
+                    ],
+                  ),
+                ),
               IconButton(
                 icon: const Icon(Icons.palette_outlined, color: Colors.white, size: 20),
                 tooltip: 'Changer le thème',
                 onPressed: _changeGroupTheme),
+            ],
             Padding(
               padding: const EdgeInsets.only(right: 12, top: 8, bottom: 8),
-              child: GestureDetector(
-                onTap: _toggleJoin,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: _isMember ? Colors.white.withOpacity(0.2) : _rose,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withOpacity(0.3))),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(_isMember
-                      ? Icons.person_remove_outlined : Icons.person_add_outlined,
-                      color: Colors.white, size: 14),
-                    const SizedBox(width: 6),
-                    Text(_isMember ? 'Quitter' : 'Rejoindre',
-                      style: const TextStyle(
-                        color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
-                  ]),
-                ),
-              )),
+              child: _buildJoinButton()),
           ],
         ),
+
+        // ✅ Bannière "En attente de validation" pour les non-membres en attente
+        if (_isPending && !_isMember)
+          SliverToBoxAdapter(child: _PendingBanner(
+            onCancel: _toggleJoin, rose: _rose)),
 
         SliverToBoxAdapter(child: Container(
           color: Colors.white,
@@ -984,12 +1178,15 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
           ),
         )),
 
-        SliverFillRemaining(child: !_isMember
-          ? _LockedContent(onJoin: _toggleJoin, rose: _rose, violet: _violet)
+        SliverFillRemaining(child: (!_isMember)
+          ? _LockedContent(
+              isPending: _isPending,
+              onJoin: _toggleJoin,
+              rose: _rose,
+              violet: _violet)
           : TabBarView(
               controller: _tabCtrl,
               children: [
-                // ✅ _ContentTab avec les nouveaux paramètres
                 _ContentTab(
                   content: content,
                   onAdd: _addContent,
@@ -1023,18 +1220,232 @@ class _ActivityDetailPageState extends State<ActivityDetailPage>
     );
   }
 
+  // ✅ Bottom sheet pour gérer les demandes en attente
+  void _showPendingSheet(List<dynamic> pending) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (_) => _PendingMembersSheet(
+        pending: pending,
+        rose: _rose,
+        onApprove: _approveMember,
+        onReject: _rejectMember,
+      ),
+    );
+  }
+
   Widget _gradientBg() => Container(decoration: BoxDecoration(
     gradient: LinearGradient(
       colors: [_rose, _violet],
       begin: Alignment.topLeft, end: Alignment.bottomRight)));
 }
 
+//  bannière "en attente de validation"
+class _PendingBanner extends StatelessWidget {
+  final VoidCallback onCancel;
+  final Color rose;
+  const _PendingBanner({required this.onCancel, required this.rose});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBEB),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFFDE68A), width: 1.5),
+      ),
+      child: Row(children: [
+        Container(
+          width: 36, height: 36,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF59E0B).withOpacity(0.15),
+            shape: BoxShape.circle),
+          child: const Center(child: Text('⏳', style: TextStyle(fontSize: 18)))),
+        const SizedBox(width: 12),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Demande en attente',
+            style: TextStyle(
+              fontSize: 13, fontWeight: FontWeight.w700,
+              color: Color(0xFF92400E))),
+          const SizedBox(height: 2),
+          Text('L\'administrateur du groupe doit valider votre demande.',
+            style: TextStyle(fontSize: 11, color: const Color(0xFF92400E).withOpacity(0.7))),
+        ])),
+        const SizedBox(width: 8),
+        GestureDetector(
+          onTap: onCancel,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF59E0B).withOpacity(0.15),
+              borderRadius: BorderRadius.circular(8)),
+            child: const Text('Annuler',
+              style: TextStyle(
+                fontSize: 11, fontWeight: FontWeight.w600,
+                color: Color(0xFF92400E)))),
+        ),
+      ]),
+    );
+  }
+}
+
+//  Bottom sheet des demandes en attente (vue admin)
+class _PendingMembersSheet extends StatelessWidget {
+  final List<dynamic> pending;
+  final Color rose;
+  final Function(String) onApprove;
+  final Function(String, String) onReject;
+
+  const _PendingMembersSheet({
+    required this.pending,
+    required this.rose,
+    required this.onApprove,
+    required this.onReject,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.55,
+      minChildSize: 0.3,
+      maxChildSize: 0.85,
+      builder: (_, scrollCtrl) => Column(children: [
+        // Handle
+        Container(
+          margin: const EdgeInsets.only(top: 12),
+          width: 40, height: 4,
+          decoration: BoxDecoration(
+            color: _border, borderRadius: BorderRadius.circular(2))),
+        // Header
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 4),
+          child: Row(children: [
+            Container(
+              width: 36, height: 36,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF59E0B).withOpacity(0.12),
+                borderRadius: BorderRadius.circular(10)),
+              child: const Icon(Icons.mark_email_unread_outlined,
+                color: Color(0xFFF59E0B), size: 18)),
+            const SizedBox(width: 12),
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Demandes d\'adhésion',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _ink)),
+              Text('${pending.length} demande${pending.length > 1 ? 's' : ''} en attente',
+                style: TextStyle(fontSize: 12, color: _slate.withOpacity(0.6))),
+            ]),
+          ])),
+        const Divider(height: 24),
+        // Liste
+        Expanded(child: pending.isEmpty
+          ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Icon(Icons.check_circle_outline_rounded, size: 48, color: Colors.grey[300]),
+              const SizedBox(height: 10),
+              Text('Aucune demande en attente',
+                style: TextStyle(color: _slate.withOpacity(0.5), fontSize: 14)),
+            ]))
+          : ListView.separated(
+              controller: scrollCtrl,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: pending.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (_, i) {
+                final p        = pending[i];
+                final userId   = p['userId']?.toString() ?? '';
+                final username = p['username']?.toString() ?? 'Utilisateur';
+
+                return Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: _border),
+                    boxShadow: [BoxShadow(
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 8, offset: const Offset(0, 2))]),
+                  child: Row(children: [
+                    CircleAvatar(
+                      radius: 22,
+                      backgroundColor: rose.withOpacity(0.12),
+                      child: Text(username[0].toUpperCase(),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700, color: rose, fontSize: 18))),
+                    const SizedBox(width: 12),
+                    Expanded(child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(username,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 14, color: _ink)),
+                      if (p['requestedAt'] != null)
+                        Text(_formatDate(p['requestedAt']),
+                          style: TextStyle(fontSize: 11, color: _slate.withOpacity(0.5))),
+                    ])),
+                    // Bouton refuser
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context);
+                        onReject(userId, username);
+                      },
+                      child: Container(
+                        width: 36, height: 36,
+                        margin: const EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(10)),
+                        child: const Icon(Icons.close_rounded,
+                          color: Colors.red, size: 18))),
+                    // Bouton accepter
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context);
+                        onApprove(userId);
+                      },
+                      child: Container(
+                        width: 36, height: 36,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF10B981).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10)),
+                        child: const Icon(Icons.check_rounded,
+                          color: Color(0xFF10B981), size: 18))),
+                  ]),
+                );
+              },
+            )),
+        const SizedBox(height: 20),
+      ]),
+    );
+  }
+
+  String _formatDate(dynamic date) {
+    if (date == null) return '';
+    try {
+      final d    = DateTime.parse(date.toString()).toLocal();
+      final diff = DateTime.now().difference(d);
+      if (diff.inMinutes < 1) return 'À l\'instant';
+      if (diff.inMinutes < 60) return 'Il y a ${diff.inMinutes} min';
+      if (diff.inHours < 24) return 'Il y a ${diff.inHours}h';
+      return '${d.day}/${d.month}/${d.year}';
+    } catch (_) { return ''; }
+  }
+}
+
 // ── Contenu verrouillé ──────────────────────────────────────────────────────
 class _LockedContent extends StatelessWidget {
   final VoidCallback onJoin;
+  final bool isPending;   
   final Color rose;
   final Color violet;
-  const _LockedContent({required this.onJoin, required this.rose, required this.violet});
+  const _LockedContent({
+    required this.onJoin,
+    required this.isPending,
+    required this.rose,
+    required this.violet,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1046,27 +1457,58 @@ class _LockedContent extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // icone différente selon l'état
               Container(
                 width: 80, height: 80,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [rose.withOpacity(0.15), violet.withOpacity(0.15)]),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.lock_rounded, size: 36, color: rose),
+                    colors: isPending
+                      ? [const Color(0xFFF59E0B).withOpacity(0.15), const Color(0xFFFDE68A).withOpacity(0.15)]
+                      : [rose.withOpacity(0.15), violet.withOpacity(0.15)]),
+                  shape: BoxShape.circle),
+                child: isPending
+                  ? const Center(child: Text('⏳', style: TextStyle(fontSize: 36)))
+                  : Icon(Icons.lock_rounded, size: 36, color: rose),
               ),
               const SizedBox(height: 20),
-              const Text(
-                'Contenu réservé aux membres',
+              Text(
+                isPending
+                  ? 'Demande en cours d\'examen'
+                  : 'Contenu réservé aux membres',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: _ink),
+                style: const TextStyle(
+                  fontSize: 18, fontWeight: FontWeight.w800, color: _ink),
               ),
               const SizedBox(height: 10),
               Text(
-                'Rejoignez cette activité pour accéder au contenu, aux membres et au chat.',
+                isPending
+                  ? 'Votre demande a été envoyée à l\'administrateur. Vous aurez accès au contenu, aux membres et au chat dès validation.'
+                  : 'Rejoignez cette activité pour accéder au contenu, aux membres et au chat.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: _slate.withOpacity(0.7), height: 1.5),
+                style: TextStyle(
+                  fontSize: 13, color: _slate.withOpacity(0.7), height: 1.5),
               ),
+              if (isPending) ...[
+                const SizedBox(height: 20),
+                GestureDetector(
+                  onTap: onJoin,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF59E0B).withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFF59E0B).withOpacity(0.3))),
+                    child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(Icons.cancel_outlined, size: 16, color: Color(0xFF92400E)),
+                      SizedBox(width: 8),
+                      Text('Annuler la demande',
+                        style: TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w600,
+                          color: Color(0xFF92400E))),
+                    ]),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -1081,10 +1523,10 @@ class _ContentTab extends StatelessWidget {
   final VoidCallback onAdd;
   final Function(String) onLike;
   final Function(String) onComment;
-  final Function(String) onEdit;       // ✅ nouveau
-  final Function(String) onDelete;     // ✅ nouveau
-  final String currentUserId;          // ✅ nouveau
-  final bool isGroupAdmin;             // ✅ nouveau
+  final Function(String) onEdit;
+  final Function(String) onDelete;
+  final String currentUserId;
+  final bool isGroupAdmin;
   final Color rose;
   final Color violet;
 
@@ -1139,12 +1581,12 @@ class _ContentTab extends StatelessWidget {
             itemBuilder: (_, i) => _PostCard(
               item: content[i] as Map<String, dynamic>,
               rose: rose,
-              currentUserId: currentUserId,          // ✅
-              isGroupAdmin: isGroupAdmin,             // ✅
+              currentUserId: currentUserId,
+              isGroupAdmin: isGroupAdmin,
               onLike:    () => onLike(content[i]['id'].toString()),
               onComment: () => onComment(content[i]['id'].toString()),
-              onEdit:    () => onEdit(content[i]['id'].toString()),    // ✅
-              onDelete:  () => onDelete(content[i]['id'].toString()),  // ✅
+              onEdit:    () => onEdit(content[i]['id'].toString()),
+              onDelete:  () => onDelete(content[i]['id'].toString()),
             ),
           )),
     ]));
@@ -1156,10 +1598,10 @@ class _PostCard extends StatelessWidget {
   final Map<String, dynamic> item;
   final VoidCallback onLike;
   final VoidCallback onComment;
-  final VoidCallback onEdit;       // ✅ nouveau
-  final VoidCallback onDelete;     // ✅ nouveau
-  final String currentUserId;      // ✅ nouveau
-  final bool isGroupAdmin;         // ✅ nouveau
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+  final String currentUserId;
+  final bool isGroupAdmin;
   final Color rose;
 
   const _PostCard({
@@ -1180,7 +1622,6 @@ class _PostCard extends StatelessWidget {
     final rawUrl   = item['imageUrl']?.toString() ?? '';
     final imageUrl = rawUrl.replaceFirst('localhost', '127.0.0.1');
 
-    // ✅ L'auteur peut modifier ET supprimer ; l'admin peut seulement supprimer
     final isAuthor  = item['userId']?.toString() == currentUserId;
     final canManage = isAuthor || isGroupAdmin;
 
@@ -1192,8 +1633,6 @@ class _PostCard extends StatelessWidget {
           offset: const Offset(0, 3))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-
-        // ── En-tête avec menu ⋮ ─────────────────────────────────────────
         Padding(padding: const EdgeInsets.fromLTRB(14, 14, 8, 0),
           child: Row(children: [
             _avatar(item['username']),
@@ -1204,38 +1643,31 @@ class _PostCard extends StatelessWidget {
               Text(_fmtDate(item['createdAt']),
                 style: TextStyle(color: _slate.withOpacity(0.5), fontSize: 11)),
             ])),
-            // Badge type
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: rose.withOpacity(0.08), borderRadius: BorderRadius.circular(8)),
               child: Text(item['type'] ?? '',
                 style: TextStyle(fontSize: 10, color: rose, fontWeight: FontWeight.w600))),
-            // ✅ Badge "modifié"
             if (item['edited'] == true) ...[
               const SizedBox(width: 6),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                 decoration: BoxDecoration(
-                  color: _slate.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(6)),
+                  color: _slate.withOpacity(0.08), borderRadius: BorderRadius.circular(6)),
                 child: Text('modifié',
                   style: TextStyle(fontSize: 9, color: _slate.withOpacity(0.6)))),
             ],
-            // ✅ Menu contextuel — visible si auteur ou admin groupe
             if (canManage)
               PopupMenuButton<String>(
-                icon: Icon(Icons.more_vert_rounded,
-                  color: _slate.withOpacity(0.5), size: 20),
+                icon: Icon(Icons.more_vert_rounded, color: _slate.withOpacity(0.5), size: 20),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                elevation: 4,
-                color: Colors.white,
+                elevation: 4, color: Colors.white,
                 onSelected: (v) {
                   if (v == 'edit')   onEdit();
                   if (v == 'delete') onDelete();
                 },
                 itemBuilder: (_) => [
-                  // ✅ Modifier : uniquement pour l'auteur
                   if (isAuthor)
                     PopupMenuItem<String>(
                       value: 'edit',
@@ -1249,9 +1681,7 @@ class _PostCard extends StatelessWidget {
                         const SizedBox(width: 10),
                         const Text('Modifier',
                           style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
-                      ]),
-                    ),
-                  // ✅ Supprimer : auteur OU admin groupe
+                      ])),
                   PopupMenuItem<String>(
                     value: 'delete',
                     child: Row(children: [
@@ -1266,13 +1696,10 @@ class _PostCard extends StatelessWidget {
                       const Text('Supprimer',
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500,
                           color: Colors.red)),
-                    ]),
-                  ),
+                    ])),
                 ],
               ),
           ])),
-
-        // ── Titre + Corps ─────────────────────────────────────────────────
         Padding(padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(item['title'] ?? '',
@@ -1281,27 +1708,14 @@ class _PostCard extends StatelessWidget {
             Text(item['body'] ?? '',
               style: TextStyle(fontSize: 13, color: _slate.withOpacity(0.8), height: 1.5)),
           ])),
-
-        // ── Image ────────────────────────────────────────────────────────
         if (imageUrl.isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                imageUrl,
-                width: double.infinity,
-                height: 220,
-                fit: BoxFit.cover,
-                errorBuilder: (_, err, __) {
-                  debugPrint('[image] erreur: $err — url: $imageUrl');
-                  return const SizedBox();
-                },
-              ),
-            ),
-          ),
-
-        // ── Actions like / comment ────────────────────────────────────────
+              child: Image.network(imageUrl,
+                width: double.infinity, height: 220, fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const SizedBox()))),
         Padding(padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
           child: Row(children: [
             GestureDetector(
@@ -1333,8 +1747,6 @@ class _PostCard extends StatelessWidget {
                     fontWeight: FontWeight.w600)),
                 ]))),
           ])),
-
-        // ── Commentaires ──────────────────────────────────────────────────
         if (comments.isNotEmpty)
           Container(
             margin: const EdgeInsets.fromLTRB(14, 0, 14, 14),
@@ -1346,8 +1758,8 @@ class _PostCard extends StatelessWidget {
                 _avatar(c['username'], size: 14),
                 const SizedBox(width: 8),
                 Expanded(child: RichText(text: TextSpan(children: [
-                  TextSpan(text: '${c['username']}  ', style: const TextStyle(
-                    fontWeight: FontWeight.w600, fontSize: 12, color: _ink)),
+                  TextSpan(text: '${c['username']}  ',
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: _ink)),
                   TextSpan(text: c['text'] ?? '',
                     style: TextStyle(fontSize: 12, color: _slate.withOpacity(0.8))),
                 ]))),
@@ -1381,10 +1793,8 @@ class _MembersTab extends StatelessWidget {
   final Function(String userId, String username) onBlock;
   final Color rose;
   const _MembersTab({
-    required this.members,
-    required this.isGroupAdmin,
-    required this.onBlock,
-    required this.rose});
+    required this.members, required this.isGroupAdmin,
+    required this.onBlock, required this.rose});
 
   @override
   Widget build(BuildContext context) {
@@ -1424,8 +1834,7 @@ class _MembersTab extends StatelessWidget {
               CircleAvatar(
                 radius: 22, backgroundColor: rose.withOpacity(0.12),
                 child: Text((m['username'] ?? 'U')[0].toUpperCase(),
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700, color: rose, fontSize: 18))),
+                  style: TextStyle(fontWeight: FontWeight.w700, color: rose, fontSize: 18))),
               const SizedBox(width: 12),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
@@ -1463,8 +1872,7 @@ class _MembersTab extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 10,
                         color: isBlocked ? Colors.red : _slate,
-                        fontWeight: FontWeight.w600)),
-                  ),
+                        fontWeight: FontWeight.w600))),
                 )
               else
                 Container(
@@ -1516,8 +1924,7 @@ class _CreateDialogState extends State<_CreateDialog> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(colors: [widget.rose, widget.violet]),
                 borderRadius: BorderRadius.circular(11)),
-              child: const Icon(Icons.add_circle_outline_rounded,
-                color: Colors.white, size: 20)),
+              child: const Icon(Icons.add_circle_outline_rounded, color: Colors.white, size: 20)),
             const SizedBox(width: 12),
             const Text('Créer une activité',
               style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: _ink)),
@@ -1549,7 +1956,7 @@ class _CreateDialogState extends State<_CreateDialog> {
                 foregroundColor: _slate, side: const BorderSide(color: _border),
                 padding: const EdgeInsets.symmetric(vertical: 13),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-              child: const Text('Annuler', style: TextStyle(fontWeight: FontWeight.w500)))),
+              child: const Text('Annuler'))),
             const SizedBox(width: 10),
             Expanded(child: ElevatedButton(
               onPressed: () {
@@ -1561,10 +1968,8 @@ class _CreateDialogState extends State<_CreateDialog> {
                                    ? _imageUrlCtrl.text.trim() : null,
                   'category':    _cat,
                   'type':        'collective',
-                  'date':        _dateCtrl.text.trim().isNotEmpty
-                                   ? _dateCtrl.text.trim() : null,
-                  'timeSlot':    _timeCtrl.text.trim().isNotEmpty
-                                   ? _timeCtrl.text.trim() : null,
+                  'date':        _dateCtrl.text.trim().isNotEmpty ? _dateCtrl.text.trim() : null,
+                  'timeSlot':    _timeCtrl.text.trim().isNotEmpty ? _timeCtrl.text.trim() : null,
                   'maxParticipants': _maxCtrl.text.trim().isNotEmpty
                                    ? int.tryParse(_maxCtrl.text.trim()) : null,
                 });
@@ -1619,20 +2024,15 @@ class _AddContentDialog extends StatefulWidget {
 class _AddContentDialogState extends State<_AddContentDialog> {
   final _titleCtrl = TextEditingController();
   final _bodyCtrl  = TextEditingController();
-
   Uint8List? _imageBytes;
   String?    _imageName;
   String _type = 'Recette';
 
   Future<void> _pickImage() async {
-    final picked = await ImagePicker().pickImage(
-      source: ImageSource.gallery, imageQuality: 80);
+    final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 80);
     if (picked != null) {
       final bytes = await picked.readAsBytes();
-      setState(() {
-        _imageBytes = bytes;
-        _imageName  = picked.name;
-      });
+      setState(() { _imageBytes = bytes; _imageName = picked.name; });
     }
   }
 
@@ -1675,19 +2075,11 @@ class _AddContentDialogState extends State<_AddContentDialog> {
                 ? Stack(children: [
                     ClipRRect(
                       borderRadius: BorderRadius.circular(11),
-                      child: Image.memory(
-                        _imageBytes!,
-                        width: double.infinity,
-                        height: 140,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
+                      child: Image.memory(_imageBytes!,
+                        width: double.infinity, height: 140, fit: BoxFit.cover)),
                     Positioned(top: 6, right: 6,
                       child: GestureDetector(
-                        onTap: () => setState(() {
-                          _imageBytes = null;
-                          _imageName  = null;
-                        }),
+                        onTap: () => setState(() { _imageBytes = null; _imageName = null; }),
                         child: Container(
                           padding: const EdgeInsets.all(4),
                           decoration: const BoxDecoration(
@@ -1695,15 +2087,11 @@ class _AddContentDialogState extends State<_AddContentDialog> {
                           child: const Icon(Icons.close, color: Colors.white, size: 14)))),
                   ])
                 : Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Icon(Icons.add_photo_alternate_outlined,
-                      color: _slate.withOpacity(0.5), size: 26),
+                    Icon(Icons.add_photo_alternate_outlined, color: _slate.withOpacity(0.5), size: 26),
                     const SizedBox(height: 5),
-                    Text('Ajouter une photo', style: TextStyle(
-                      fontSize: 12, color: _slate.withOpacity(0.6))),
-                    Text('Depuis votre galerie', style: TextStyle(
-                      fontSize: 10, color: _slate.withOpacity(0.4))),
-                  ]),
-            ),
+                    Text('Ajouter une photo', style: TextStyle(fontSize: 12, color: _slate.withOpacity(0.6))),
+                    Text('Depuis votre galerie', style: TextStyle(fontSize: 10, color: _slate.withOpacity(0.4))),
+                  ])),
           ),
           const SizedBox(height: 10),
           DropdownButtonFormField<String>(value: _type,
@@ -1725,7 +2113,7 @@ class _AddContentDialogState extends State<_AddContentDialog> {
                 foregroundColor: _slate, side: const BorderSide(color: _border),
                 padding: const EdgeInsets.symmetric(vertical: 13),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-              child: const Text('Annuler', style: TextStyle(fontWeight: FontWeight.w500)))),
+              child: const Text('Annuler'))),
             const SizedBox(width: 10),
             Expanded(child: ElevatedButton(
               onPressed: () {

@@ -1,6 +1,4 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:wejoy/screens/service/api_service.dart';
 
 
@@ -79,8 +77,6 @@ class _ChatPageState extends State<ChatPage> {
     _scrollToBottom();
 
     try {
-      final token = await _api.getToken();
-
       final history = _messages
           .where((m) => m.text != trimmedText)
           .take(10)
@@ -90,42 +86,28 @@ class _ChatPageState extends State<ChatPage> {
               })
           .toList();
 
-      final response = await http
-          .post(
-            Uri.parse('$baseUrl/api/chat'),
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer $token',
-            },
-            body: jsonEncode({
-              'message': trimmedText,
-              'history': history,
-              'userProfile': widget.user != null
-                  ? {
-                      'username': widget.user!.username,
-                      'memberSince': widget.user!.memberSince,
-                      'points': widget.user!.points,
-                      'interests': widget.user!.interests,
-                    }
-                  : null,
-            }),
-          )
-          .timeout(const Duration(seconds: 30));
+      final data = await _api.sendChatMessage(
+        message: trimmedText,
+        history: history,
+        userProfile: widget.user != null
+            ? {
+                'username': widget.user!.username,
+                'memberSince': widget.user!.memberSince,
+                'points': widget.user!.points,
+                'interests': widget.user!.interests,
+              }
+            : null,
+      );
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        setState(() {
-          _messages.add(
-            ChatMessage(
-              text: data['reply'] ?? 'Je n\'ai pas pu générer une réponse.',
-              isUser: false,
-            ),
-          );
-          _isTyping = false;
-        });
-      } else {
-        throw Exception('Erreur ${response.statusCode}');
-      }
+      setState(() {
+        _messages.add(
+          ChatMessage(
+            text: data['reply'] ?? 'Je n\'ai pas pu générer une réponse.',
+            isUser: false,
+          ),
+        );
+        _isTyping = false;
+      });
     } catch (e) {
       setState(() {
         _messages.add(

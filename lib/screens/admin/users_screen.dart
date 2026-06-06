@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 
-const String _base = 'http://localhost:5000';
+const String _baseUrl = 'http://localhost:5000';
 
 class UsersScreen extends StatefulWidget {
   const UsersScreen({super.key});
@@ -36,8 +36,8 @@ class _UsersScreenState extends State<UsersScreen> {
     setState(() => _loading = true);
     try {
       final url = search != null && search.isNotEmpty
-          ? Uri.parse('$_base/api/users?search=$search')
-          : Uri.parse('$_base/api/users');
+          ? Uri.parse('$_baseUrl/api/users?search=$search')
+          : Uri.parse('$_baseUrl/api/users');
       final res = await http.get(url, headers: await _headers());
       if (res.statusCode == 200) {
         setState(() => _users = jsonDecode(res.body));
@@ -93,7 +93,7 @@ class _UsersScreenState extends State<UsersScreen> {
 
     try {
       final res = await http.put(
-        Uri.parse('$_base/api/users/${u['id']}/block'),
+        Uri.parse('$_baseUrl/api/users/${u['id']}/block'),
         headers: await _headers(),
       );
       if (res.statusCode == 200) {
@@ -151,7 +151,7 @@ class _UsersScreenState extends State<UsersScreen> {
 
     try {
       final res = await http.delete(
-        Uri.parse('$_base/api/users/${u['id']}'),
+        Uri.parse('$_baseUrl/api/users/${u['id']}'),
         headers: await _headers(),
       );
       if (res.statusCode == 200) {

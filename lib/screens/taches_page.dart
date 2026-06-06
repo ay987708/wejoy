@@ -46,7 +46,6 @@ class _TachesPageState extends State<TachesPage>
   bool _loading = true;
   final _personalCtrl = TextEditingController();
   Timer? _timer;
-
   // Filtre actif onglet Perso
   String _filter = 'Toutes';
 
